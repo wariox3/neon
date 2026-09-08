@@ -1,0 +1,13 @@
+---
+/**
+ * Alta y edición del emisor. Cuál de las dos lo dice `?id=` en la URL: la
+ * salida es estática, así que no hay ruta dinámica que prerenderizar para un id
+ * que todavía no existe.
+ */
+import Panel from '../../../layouts/Panel.astro';
+import EmisorFormulario from '../../../components/app/EmisorFormulario.tsx';
+---
+
+<Panel titulo="Emisor">
+  <EmisorFormulario client:only="react" />
+</Panel>

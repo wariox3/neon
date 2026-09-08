@@ -1,0 +1,50 @@
+---
+/**
+ * Cascarón de las páginas del panel.
+ *
+ * Vive fuera de la colección `docs`, así que no hereda el diseño de Starlight;
+ * sí reutiliza sus variables de color (`src/styles/custom.css`) para que el
+ * panel y la documentación se vean del mismo sitio.
+ *
+ * La navegación se pinta solo cuando la página la pide: las pantallas de
+ * ingreso, registro y confirmación no tienen a dónde navegar todavía.
+ */
+import '../styles/custom.css';
+import '../styles/panel.css';
+import BarraPanel from '../components/app/BarraPanel.tsx';
+
+interface Props {
+  titulo: string;
+  navegacion?: boolean;
+}
+
+const { titulo, navegacion = true } = Astro.props;
+---
+
+<html lang="es-CO">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- El panel es privado: nada que indexar. -->
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>{titulo} · RedEDoc</title>
+    <script is:inline>
+      // Antes de pintar, para que no haya destello de tema claro. Es la misma
+      // clave que usa Starlight, así que el tema se comparte con la documentación.
+      // Starlight guarda 'light', 'dark' o 'auto'; 'auto' (y la ausencia de
+      // valor) siguen al sistema.
+      const guardado = localStorage.getItem('starlight-theme');
+      const oscuro = guardado === 'dark' || guardado === 'light'
+        ? guardado === 'dark'
+        : window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.dataset.theme = oscuro ? 'dark' : 'light';
+    </script>
+  </head>
+  <body>
+    {navegacion && <BarraPanel client:only="react" />}
+    <main class="panel-contenido">
+      <slot />
+    </main>
+  </body>
+</html>

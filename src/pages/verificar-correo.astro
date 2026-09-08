@@ -1,0 +1,17 @@
+---
+/**
+ * Aterrizaje del enlace de confirmación del correo.
+ *
+ * Va en la raíz y no bajo `/app/` porque es la ruta que el backend ya trae por
+ * defecto en `URL_VERIFICACION_CORREO`. Si allí se cambia, hay que mover esta
+ * página con ella.
+ */
+import Panel from '../layouts/Panel.astro';
+import ConfirmarCorreo from '../components/app/ConfirmarCorreo.tsx';
+---
+
+<Panel titulo="Confirmar el correo" navegacion={false}>
+  <div class="panel-contenido--estrecho">
+    <ConfirmarCorreo client:only="react" />
+  </div>
+</Panel>

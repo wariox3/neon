@@ -1,0 +1,419 @@
+/*
+ * Estilos del panel. La documentación la viste Starlight; estas páginas no
+ * pasan por él, así que aquí se define lo básico —tipografía, fondo, formularios
+ * y tablas— sobre las mismas variables de color de `custom.css`.
+ */
+
+:root {
+  --panel-borde: var(--sl-color-gray-5);
+  --panel-fondo-sutil: var(--sl-color-gray-6);
+  --panel-radio: 0.5rem;
+  --panel-error: #f5a3a3;
+  --panel-exito: #8ee0b4;
+}
+
+:root[data-theme='light'] {
+  --panel-borde: var(--sl-color-gray-5);
+  --panel-fondo-sutil: var(--sl-color-gray-7, #f4f6f9);
+  --panel-error: #b42318;
+  --panel-exito: #0a7a52;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--sl-color-black);
+  color: var(--sl-color-white);
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+a {
+  color: var(--sl-color-accent-high);
+}
+
+/* --- Estructura ---------------------------------------------------------- */
+
+.panel-barra {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--panel-borde);
+  background: var(--panel-fondo-sutil);
+}
+
+.panel-barra__marca {
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--sl-color-white);
+}
+
+.panel-barra__enlaces {
+  display: flex;
+  gap: 1rem;
+  margin-right: auto;
+}
+
+.panel-barra__enlaces a {
+  text-decoration: none;
+  color: var(--sl-color-gray-2);
+  padding: 0.25rem 0;
+  border-bottom: 2px solid transparent;
+}
+
+.panel-barra__enlaces a:hover,
+.panel-barra__enlaces a[aria-current='page'] {
+  color: var(--sl-color-white);
+  border-bottom-color: var(--sl-color-accent);
+}
+
+.panel-barra__persona {
+  color: var(--sl-color-gray-3);
+  font-size: 0.875rem;
+}
+
+.panel-contenido {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.panel-contenido--estrecho {
+  max-width: 26rem;
+  margin: 0 auto;
+}
+
+.panel-cabecera {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+h1 {
+  font-size: 1.75rem;
+  line-height: 1.2;
+  margin: 0 0 0.5rem;
+}
+
+h2 {
+  font-size: 1.25rem;
+  margin: 2rem 0 0.75rem;
+}
+
+.panel-guia {
+  color: var(--sl-color-gray-3);
+  margin: 0 0 1.5rem;
+}
+
+/* --- Formularios --------------------------------------------------------- */
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.campo > label {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.campo__ayuda {
+  font-size: 0.8125rem;
+  color: var(--sl-color-gray-3);
+}
+
+.campo__error {
+  font-size: 0.8125rem;
+  color: var(--panel-error);
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--panel-borde);
+  border-radius: var(--panel-radio);
+  background: var(--panel-fondo-sutil);
+  width: 100%;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--sl-color-accent);
+  outline-offset: 1px;
+}
+
+input[aria-invalid='true'] {
+  border-color: var(--panel-error);
+}
+
+.campo--casilla {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.campo--casilla input {
+  width: auto;
+}
+
+.campo--casilla label {
+  font-weight: 400;
+}
+
+.rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0 1rem;
+}
+
+/* --- Botones ------------------------------------------------------------- */
+
+button {
+  font: inherit;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--panel-radio);
+  background: var(--sl-color-accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+button.secundario {
+  background: transparent;
+  border-color: var(--panel-borde);
+  color: var(--sl-color-white);
+}
+
+button.enlace {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--sl-color-accent-high);
+  text-decoration: underline;
+  font-weight: 400;
+}
+
+button.peligro {
+  background: transparent;
+  border-color: var(--panel-error);
+  color: var(--panel-error);
+}
+
+.acciones {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+/* --- Avisos -------------------------------------------------------------- */
+
+.aviso {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--panel-borde);
+  border-left-width: 3px;
+  border-radius: var(--panel-radio);
+  margin-bottom: 1rem;
+}
+
+.aviso--error {
+  border-left-color: var(--panel-error);
+}
+
+.aviso--exito {
+  border-left-color: var(--panel-exito);
+}
+
+.aviso p:first-child {
+  margin-top: 0;
+}
+
+.aviso p:last-child {
+  margin-bottom: 0;
+}
+
+/* --- Tablas -------------------------------------------------------------- */
+
+.tabla-contenedor {
+  overflow-x: auto;
+  border: 1px solid var(--panel-borde);
+  border-radius: var(--panel-radio);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid var(--panel-borde);
+  white-space: nowrap;
+}
+
+th {
+  background: var(--panel-fondo-sutil);
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sl-color-gray-2);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.monospacio {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.875rem;
+}
+
+.etiqueta {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--panel-fondo-sutil);
+  border: 1px solid var(--panel-borde);
+}
+
+.etiqueta--si {
+  color: var(--panel-exito);
+  border-color: currentcolor;
+}
+
+.etiqueta--no {
+  color: var(--sl-color-gray-3);
+}
+
+.paginacion {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: var(--sl-color-gray-3);
+}
+
+.vacio {
+  padding: 2rem;
+  text-align: center;
+  color: var(--sl-color-gray-3);
+}
+
+.barra-busqueda {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.barra-busqueda input {
+  max-width: 22rem;
+}
+
+/* --- Selector con búsqueda ------------------------------------------------ */
+
+.sugerencias {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  max-height: 15rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--sl-color-black);
+  border: 1px solid var(--panel-borde);
+  border-radius: var(--panel-radio);
+}
+
+.sugerencias li button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 0;
+  color: inherit;
+  font-weight: 400;
+  padding: 0.45rem 0.65rem;
+}
+
+.sugerencias li button:hover {
+  background: var(--panel-fondo-sutil);
+  filter: none;
+}
+
+.sugerencias li button .monospacio {
+  color: var(--sl-color-gray-3);
+}
+
+.sugerencias__nota {
+  padding: 0.45rem 0.65rem;
+  color: var(--sl-color-gray-3);
+  font-size: 0.875rem;
+}
+
+/* --- Casillas en rejilla (responsabilidades fiscales) --------------------- */
+
+.casillas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.35rem 1rem;
+  padding: 0.75rem;
+  border: 1px solid var(--panel-borde);
+  border-radius: var(--panel-radio);
+  max-height: 14rem;
+  overflow-y: auto;
+}
+
+.casilla {
+  display: flex;
+  align-items: start;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+}
+
+.casilla input {
+  width: auto;
+  margin-top: 0.35rem;
+}
+
+.casilla .monospacio {
+  color: var(--sl-color-gray-3);
+}

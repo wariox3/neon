@@ -35,7 +35,7 @@ asume esa condición.
     DIAN → PDF con código QR.
   </Card>
   <Card title="Una API REST y ya" icon="puzzle">
-    Sin sesiones ni cookies: el ERP se autentica con una llave de API y todo el ciclo de
+    El ERP se autentica con una llave de API —una cabecera y nada más— y todo el ciclo de
     vida del documento se hace por HTTP.
   </Card>
   <Card title="Conforme al Anexo Técnico" icon="approve-check">
@@ -58,9 +58,14 @@ asume esa condición.
     description="De la credencial al primer documento emitido, en orden."
   />
   <LinkCard
+    title="Entrar al panel"
+    href="/app/"
+    description="Regístrate, crea tus llaves de API y gestiona tus emisores."
+  />
+  <LinkCard
     title="Autenticación"
     href="/guias/autenticacion/"
-    description="Llave de API para el ERP, JWT para las aplicaciones con usuario."
+    description="Llave de API para el ERP, sesión en cookie para las aplicaciones con usuario."
   />
   <LinkCard
     title="Referencia de la API"

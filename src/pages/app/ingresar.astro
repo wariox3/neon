@@ -1,0 +1,10 @@
+---
+import Panel from '../../layouts/Panel.astro';
+import Ingreso from '../../components/app/Ingreso.tsx';
+---
+
+<Panel titulo="Entrar" navegacion={false}>
+  <div class="panel-contenido--estrecho">
+    <Ingreso client:only="react" />
+  </div>
+</Panel>

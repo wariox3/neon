@@ -1,0 +1,8 @@
+---
+import Panel from '../../../layouts/Panel.astro';
+import Emisores from '../../../components/app/Emisores.tsx';
+---
+
+<Panel titulo="Emisores">
+  <Emisores client:only="react" />
+</Panel>

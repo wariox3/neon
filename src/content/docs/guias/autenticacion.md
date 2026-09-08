@@ -1,16 +1,21 @@
 ---
 title: Autenticación
-description: Llave de API para las integraciones de ERP, JWT para las aplicaciones con usuario, y cómo funciona el alcance por cuenta.
+description: Llave de API para las integraciones de ERP, sesión en cookie para las aplicaciones con usuario, y cómo funciona el alcance.
 sidebar:
   order: 2
 ---
 
-La API es **stateless**: no hay sesiones ni cookies. Cada petición se identifica sola, con
-una de dos credenciales.
+Hay dos credenciales, y no son intercambiables porque los clientes no se parecen. Un ERP
+es una máquina sin nadie delante: necesita una credencial larga que pueda guardar en su
+servidor. Un navegador tiene una persona delante y un enemigo propio, el XSS: necesita una
+sesión que su propio JavaScript no pueda leer.
+
+| Cliente | Credencial | Dónde viaja |
+| --- | --- | --- |
+| ERP, integración servidor a servidor, tarea programada | Llave de API | Cabecera `Authorization` |
+| Aplicación con inicio de sesión de una persona | Sesión JWT | Cookies `httpOnly` |
 
 ## Llave de API — para integraciones
-
-Es la vía de un ERP o de cualquier sistema que hable con la API sin usuario delante.
 
 ```
 Authorization: Api-Key <prefijo>.<secreto>
@@ -27,47 +32,188 @@ curl -H "Authorization: Api-Key $API_KEY" \
   http://localhost:8000/api/catalogos/tributo/
 ```
 
-## JWT — para aplicaciones con usuario
+Esta vía es **stateless**: no usa cookies ni sesión, y cada petición se identifica sola.
 
-Una aplicación con usuario delante canjea sus credenciales por un par de tokens:
+### Crear una llave
+
+Las llaves se gestionan con la sesión iniciada, en `/api/seguridad/llave-api/`. Cada
+persona ve y administra las suyas — con formulario, en
+[el panel](/app/llaves/); o por la API:
+
+```bash
+curl -X POST http://localhost:8000/api/seguridad/llave-api/ \
+  -H "Content-Type: application/json" --cookie cookies.txt \
+  -d '{"nombre": "ERP producción"}'
+```
+
+La respuesta del alta —y solo esa— trae el campo `clave` con la credencial completa. En
+las lecturas posteriores viene `null`, porque el servidor guarda el hash del secreto y no
+el secreto.
+
+- La llave queda **a nombre de quien la pide**. No se puede crear a nombre de otro.
+- Una persona puede tener **varias llaves vivas** a la vez: es lo que permite rotar sin
+  dejar al ERP sin credencial. Se crea la nueva, se despliega y luego se desactiva la
+  vieja (`activa: false`) o se borra.
+- Se le puede poner fecha de caducidad con `expira_en`.
+
+### La llave actúa en nombre de su dueño
+
+Una llave de API no tiene permisos propios: alcanza **exactamente los mismos emisores que
+la persona que la creó**, ni uno más. Es la misma regla para los dos tipos de credencial,
+así que no hay dos definiciones de alcance que puedan separarse con el tiempo.
+
+## Sesión en cookie — para aplicaciones con usuario
+
+El servidor emite la sesión en cookies `httpOnly`, que el JavaScript del navegador no
+puede leer: un XSS ya no se lleva la sesión. Es la razón de existir de todo este camino.
+
+:::caution[No hay `Authorization: Bearer`]
+El token de acceso se lee **solo** de la cookie. Mandarlo en la cabecera no autentica: si
+el front pudiera mandarlo, tendría que guardarlo en algún sitio legible, y ahí se acabaría
+la garantía. Un cliente que no sea navegador usa la llave de API, que es el otro camino.
+:::
+
+### 1. Registrarse y confirmar el correo
+
+```bash
+curl -X POST http://localhost:8000/api/seguridad/registro/ \
+  -H "Content-Type: application/json" \
+  -d '{"email": "persona@empresa.co", "password": "...", "nombre_corto": "Ana"}'
+```
+
+Responde `201` y manda un correo con el enlace de confirmación. Hasta confirmarlo no se
+puede iniciar sesión (`403`). El enlace se confirma en `POST /api/seguridad/registro/verificar/`
+y se puede pedir otro en `POST /api/seguridad/registro/reenviar/`.
+
+### 2. Iniciar sesión
 
 ```bash
 curl -X POST http://localhost:8000/api/seguridad/token/ \
-  -H "Content-Type: application/json" \
-  -d '{"correo": "persona@empresa.co", "clave": "..."}'
+  -H "Content-Type: application/json" --cookie-jar cookies.txt \
+  -d '{"email": "persona@empresa.co", "password": "..."}'
 ```
 
-y usa el token de acceso en cada petición:
+Si la cuenta no tiene segundo factor, la respuesta **no trae tokens**: trae los datos de la
+persona, y la sesión viaja en las cookies que el servidor acaba de poner.
 
-```
-Authorization: Bearer <access>
-```
-
-Ver [Obtener un token JWT](/api/seguridad/seguridad-token-crear/) en la referencia.
-
-## Cuál usar
-
-| Caso | Credencial |
+| Cookie | Qué es |
 | --- | --- |
-| ERP, integración servidor a servidor, tarea programada | Llave de API |
-| Aplicación con inicio de sesión de una persona | JWT |
+| `access_token` | Token de acceso. Vida corta (15 min por defecto). |
+| `refresh_token` | Token de refresco. Renueva el acceso sin volver a pedir la clave. |
+| `mfa_dispositivo` | Marca este navegador como de confianza. Solo si se pidió recordarlo. |
 
-## Alcance por cuenta
+Las tres son `httpOnly`, `Secure` fuera de desarrollo y `SameSite=Lax`.
 
-La **cuenta** es el inquilino: agrupa emisores y llaves. Una credencial solo alcanza los
-emisores de su propia cuenta.
+### 3. Segundo factor, si la cuenta lo tiene
 
-- Lo que es de otra cuenta **no aparece en los listados**.
-- Pedirlo directamente por su id responde **`404`**, no `403`: desde fuera de la cuenta,
-  ese recurso no existe.
+Cuando la cuenta tiene segundo factor, el paso anterior **no emite sesión ninguna**.
+Responde el desafío:
+
+```json
+{ "mfa_requerido": true, "mfa_token": "...", "metodo": "totp" }
+```
+
+y la sesión se emite al resolverlo:
+
+```bash
+curl -X POST http://localhost:8000/api/seguridad/token/mfa/ \
+  -H "Content-Type: application/json" --cookie-jar cookies.txt \
+  -d '{"mfa_token": "...", "codigo": "123456", "recordar_dispositivo": true}'
+```
+
+Con `recordar_dispositivo` el servidor añade la cookie `mfa_dispositivo`, y en los
+siguientes ingresos desde ese navegador no vuelve a pedir el código. Esa cookie
+**sobrevive al cierre de sesión** a propósito: dice "este navegador es de confianza", no
+"esta sesión está abierta". Si el método manda el código por correo,
+`POST /api/seguridad/token/mfa/reenviar/` manda otro.
+
+El segundo factor se administra desde la propia cuenta, ya con la sesión iniciada, bajo
+`/api/seguridad/mfa/`: `metodos/`, estado, `enrolar/`, `confirmar/`, `desactivar/` y
+`codigos-respaldo/`. Los códigos de respaldo se muestran una sola vez, al confirmar.
+
+### 4. Renovar y cerrar
+
+```bash
+curl -X POST http://localhost:8000/api/seguridad/token/refresh/ --cookie cookies.txt --cookie-jar cookies.txt
+curl -X POST http://localhost:8000/api/seguridad/token/cerrar/  --cookie cookies.txt
+```
+
+`refresh/` no lleva cuerpo: usa la cookie. Cada refresco entrega un token nuevo y **anula
+el anterior**, así que un refresh robado deja de servir en cuanto el dueño legítimo
+refresca. `cerrar/` invalida el refresco y borra las cookies de sesión.
+
+`GET /api/seguridad/me/` responde quién es quien pregunta; es la forma de saber, al cargar
+la aplicación, si la cookie que trae el navegador sigue viva.
+
+### Cuánto dura una sesión
+
+| Plazo | Valor por defecto | Qué significa |
+| --- | --- | --- |
+| Acceso | 15 minutos | Lo que vale el `access_token` antes de tener que renovarlo. |
+| Refresco | 1 día | Vencimiento por **inactividad**: cada renovación lo corre hacia adelante. |
+| Sesión | 30 días | Tope **absoluto**: pasado ese plazo hay que iniciar sesión otra vez, se haya usado o no. |
+
+Sin el tope absoluto, renovar a diario haría que una sesión no caducara nunca. Son los
+valores por defecto del proyecto; la instancia publicada puede tener otros.
+
+### Lo que tiene que hacer el front
+
+- **Mandar las cookies**: `fetch(url, { credentials: "include" })`. Sin eso el navegador
+  no las envía y todo responde `401`.
+- **Compartir dominio registrable** con la API (`app.ejemplo.co` y `api.ejemplo.co`).
+  `SameSite=Lax` es lo que frena el CSRF, y por eso no hay token CSRF que manejar; a
+  cambio, la aplicación no puede vivir en un dominio distinto del de la API.
+- **HTTPS en producción**: las cookies van marcadas `Secure`.
+- **Renovar y reintentar**: ante un `401` por acceso vencido, llamar a `token/refresh/` y
+  repetir la petición. Si el refresco también falla, la sesión terminó.
+
+:::note[En desarrollo]
+Con el servidor en modo depuración, el ingreso devuelve además el token de acceso en el
+cuerpo, porque curl y Postman no guardan cookies. En producción el token no sale del
+navegador.
+:::
+
+## Alcance: qué emisores ve cada quien
+
+Todos los datos de la plataforma cuelgan de un **emisor**, así que el aislamiento se
+reduce a una sola pregunta: *¿qué emisores alcanza quien pregunta?* Y hay una sola regla:
+
+- Los emisores que **posee** —los que dio de alta—, más
+- los que le hayan **compartido** uno a uno.
+
+Sin ninguna de las dos cosas no ve ningún dato: falla cerrado. Una llave de API alcanza lo
+que alcanza su dueño, ni más ni menos.
+
+- Lo que es de otro **no aparece en los listados**.
+- Pedirlo directamente por su id responde **`404`**, no `403`: desde fuera, ese recurso no
+  existe. Distinguirlos convertiría al endpoint en un oráculo para averiguar qué ids hay.
 
 Los catálogos son la excepción en el otro sentido: son comunes y de **solo lectura**.
 
+:::note[Ya no hay "cuenta"]
+El servicio tuvo un inquilino intermedio llamado *cuenta*, que agrupaba emisores y daba
+alcance a las llaves. Desapareció: el dueño de un emisor es directamente una persona. Si
+tu integración enviaba el campo `cuenta` al dar de alta un emisor, ya no existe.
+:::
+
 ## Topes de peticiones
 
-La API limita cuántas peticiones acepta por credencial y por hora. Los valores por defecto
-del proyecto son `300/hora` con credencial y `30/hora` sin ella; la instancia publicada
-puede tener otros. TODO: confirmar los topes efectivos y qué responde la API al superarlos.
+La API limita cuántas peticiones acepta. Los valores por defecto del proyecto:
+
+| Ruta | Tope |
+| --- | --- |
+| General, con credencial | 300/hora |
+| General, sin credencial | 30/hora |
+| Ingreso (`token/`) | 20/hora y 5/min por IP, más 10/hora por correo |
+| Segundo factor (`token/mfa/`) | 20/hora y 10/min |
+| Reenvío de código o de correo | 5/hora y 2/min |
+| Registro | 3/hora y 1/min |
+| Renovación (`token/refresh/`) | 120/hora |
+
+El tope por correo en el ingreso es el que protege una cuenta concreta: sin él, repartir
+un ataque entre muchas IP la dejaría sin defensa. La instancia publicada puede tener otros
+valores. TODO: confirmar los topes efectivos del servicio publicado y qué responde la API
+al superarlos.
 
 ## Cuidados
 
@@ -75,4 +221,5 @@ puede tener otros. TODO: confirmar los topes efectivos y qué responde la API al
   gestor de secretos, **nunca** en el repositorio ni en el front.
 - Una llave por integración y con nombre reconocible: si hay que revocar una, no se cae
   todo lo demás.
-- La API no debe llamarse desde el navegador del cliente: la credencial quedaría expuesta.
+- **La llave de API no se usa desde el navegador.** Quedaría expuesta a cualquiera que
+  abra las herramientas de desarrollo. Para eso está la sesión en cookie.

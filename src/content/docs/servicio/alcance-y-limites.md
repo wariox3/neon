@@ -25,12 +25,18 @@ sin SLA — el de nadie, tampoco este.
 ## Límites técnicos conocidos
 
 - **Topes de peticiones.** La API limita el número de peticiones por credencial. Los
-  valores por defecto del proyecto son `300/hora` con credencial y `30/hora` sin ella,
-  pero la instancia publicada puede tener otros. TODO: confirmar los topes efectivos del
-  servicio publicado.
+  valores por defecto del proyecto son `300/hora` con credencial y `30/hora` sin ella, con
+  topes más estrechos en registro, ingreso y segundo factor (ver
+  [Autenticación](/guias/autenticacion/)). La instancia publicada puede tener otros. TODO:
+  confirmar los topes efectivos del servicio publicado.
 - **Un software DIAN activo por emisor.** Registrar uno nuevo jubila el anterior.
-- **Alcance por cuenta.** Cada credencial solo alcanza los emisores de su cuenta: lo ajeno
-  no aparece en los listados y responde `404`.
+- **Un NIT, un emisor.** La identificación es única en toda la plataforma: el mismo NIT no
+  puede estar dado de alta dos veces, ni siquiera a nombre de personas distintas.
+- **Alcance por dueño.** Cada credencial alcanza los emisores que su dueño posee, más los
+  que le hayan compartido: lo ajeno no aparece en los listados y responde `404`.
+- **La aplicación web y la API comparten dominio.** La sesión del navegador viaja en
+  cookies `SameSite=Lax`, así que un front alojado en otro dominio registrable no puede
+  usarla. Las integraciones servidor a servidor no tienen esa restricción.
 
 ## Pendientes reconocidos
 
@@ -44,8 +50,9 @@ Cosas que el proyecto declara abiertas, para que nadie se lleve una sorpresa:
 
 ## Lo que no está resuelto aquí
 
-- **Cómo se solicita una cuenta y una llave de API.** Hoy las crea el equipo del servicio
-  por línea de comandos. TODO: documentar el canal de alta para el público.
+- **Recuperación de contraseña.** El registro y la confirmación del correo ya son
+  públicos, pero todavía no hay un flujo documentado para recuperar el acceso si se pierde
+  la contraseña. TODO.
 - **La URL del servicio publicado.** TODO: fijarla y reemplazar `http://localhost:8000` en
   los ejemplos.
 - **Canal de contacto.** TODO.

@@ -61,8 +61,9 @@ Técnico, XSD, listas de valores y guía de Web Services.
 
 ## Qué no es
 
-- **No es un software contable ni un portal de facturación.** No tiene sitio de
-  administración: la API es *stateless*, sin sesiones ni cookies.
+- **No es un software contable.** El [panel](/app/) sirve para darte de alta, crear tus
+  llaves de API y mantener tus emisores; facturar es cosa de tu sistema, que habla con la
+  API.
 - **No guarda una cartera de clientes.** Los datos del adquiriente van dentro de cada
   documento, y cada documento conserva su copia: la que quedó firmada en el XML y entró
   en el CUFE.

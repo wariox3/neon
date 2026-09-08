@@ -15,27 +15,47 @@ publicado cuando esté definida.
 
 ## 1. Conseguir una credencial
 
-Todo cuelga de una **cuenta**, que es el inquilino del servicio, y de una **llave de API**
-asociada a ella. La llave se muestra **una sola vez**: guárdala en donde guardes los
-secretos de tu ERP.
+Primero una persona, y de ella cuelga todo lo demás.
+
+:::tip[Con formulario, si lo prefieres]
+Los pasos 1 y 3 —registrarte, crear la llave y dar de alta el emisor— se pueden hacer
+desde el [panel](/app/), sin escribir una sola petición. Lo que sigue es el mismo camino
+por la API, que es el que automatiza un ERP.
+:::
+
+El registro es público:
+
+```bash
+curl -X POST http://localhost:8000/api/seguridad/registro/ \
+  -H "Content-Type: application/json" \
+  -d '{"email": "tu@empresa.co", "password": "..."}'
+```
+
+Confirma el correo con el enlace que llega, inicia sesión en
+`POST /api/seguridad/token/` —que deja la sesión en cookies— y con esa sesión crea la
+llave de tu integración:
+
+```bash
+curl -X POST http://localhost:8000/api/seguridad/llave-api/ \
+  -H "Content-Type: application/json" --cookie cookies.txt \
+  -d '{"nombre": "ERP producción"}'
+```
+
+El campo `clave` de esa respuesta es la credencial completa y se muestra **una sola vez**:
+guárdala donde guardes los secretos de tu ERP.
 
 ```bash
 export API_KEY='<prefijo>.<secreto>'
 ```
 
-Toda petición la lleva en la cabecera:
+Toda petición del ERP la lleva en la cabecera:
 
 ```
 Authorization: Api-Key <prefijo>.<secreto>
 ```
 
-Ver [Autenticación](/guias/autenticacion/) para la otra vía (JWT) y para cómo funciona el
-alcance por cuenta.
-
-:::caution
-TODO: documentar cómo se solicita la cuenta y la llave. Hoy las crea el equipo del
-servicio; no hay registro público.
-:::
+Ver [Autenticación](/guias/autenticacion/) para el detalle de las dos vías —llave de API y
+sesión en cookie— y para cómo funciona el alcance.
 
 ## 2. Mirar los catálogos
 
@@ -61,8 +81,8 @@ lo quemes en tu código: resuélvelo por `codigo` o por búsqueda, y guárdalo p
 
 ## 3. Crear el emisor
 
-El emisor es el obligado a facturar (el OFE). La `cuenta` no se envía: sale de la
-credencial.
+El emisor es el obligado a facturar (el OFE). Queda **a nombre de quien lo da de alta**:
+el dueño no se envía en el cuerpo, sale de la credencial.
 
 ```bash
 curl -X POST http://localhost:8000/api/emisores/emisor/ \
@@ -84,8 +104,9 @@ curl -X POST http://localhost:8000/api/emisores/emisor/ \
 justamente porque el id cambia entre ambientes. El servidor resuelve el código contra el
 catálogo; si no existe, responde `400` en ese campo.
 
-El alta no consulta el RUES. Lo que sí se rechaza es repetir un emisor ya dado de alta en
-la misma cuenta. Para comprobar un NIT y autocompletar el formulario:
+El alta no consulta el RUES. Lo que sí se rechaza es repetir una identificación ya dada de
+alta: el NIT es único en toda la plataforma, esté a nombre de quien esté. Para comprobar un
+NIT y autocompletar el formulario:
 
 ```bash
 curl -H "Authorization: Api-Key $API_KEY" \
@@ -104,7 +125,7 @@ Crear el documento, emitirlo, enviarlo y descargar el XML y el PDF. Está en
 
 ## Resumen del camino
 
-1. Credencial (llave de API).
+1. Registro, sesión y llave de API.
 2. Catálogos, para resolver los ids.
 3. Emisor.
 4. Certificado → software DIAN → resolución.

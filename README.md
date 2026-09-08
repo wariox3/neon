@@ -3,18 +3,39 @@
 Sitio público de **RedEDoc**, el servicio gratuito de facturación electrónica DIAN para
 Colombia: la cara con la que la gente lo descubre y aprende a usarlo.
 
-Son tres cosas y nada más:
+Son cuatro cosas:
 
 1. **Información del servicio** — qué es, para quién y qué resuelve.
 2. **Documentación en prosa** — guías: empezar, autenticación, habilitación ante la DIAN,
    flujo de emisión y tipos de documento.
 3. **Referencia de la API** — generada desde un `openapi.json`, nunca escrita a mano.
+4. **El panel** (`/app/`) — registrarse, gestionar las llaves de API y dar de alta y
+   mantener los emisores, contra la API de nobelio.
+
+## Cómo funciona el panel sin dejar de ser estático
+
+El sitio **no tiene servidor propio**: `npm run build` sigue produciendo archivos que se
+sirven desde cualquier CDN o Pages. Las páginas de `/app/` son cascarones vacíos que montan
+una isla de React y piden sus datos a la API desde el navegador.
+
+La sesión son cookies `httpOnly` que emite nobelio y que el navegador manda solo, así que
+no hay ningún token que guardar aquí ni nada que validar en el servidor. Dos consecuencias
+que conviene tener presentes:
+
+- **El panel y la API tienen que compartir dominio registrable** (`rededoc.co` y
+  `api.rededoc.co`): las cookies son `SameSite=Lax`. Y nobelio tiene que permitir el origen
+  del sitio con `CORS_ALLOWED_ORIGINS` y `CORS_ALLOW_CREDENTIALS=True`.
+- **Aquí no hay contenido protegido**, ni puede haberlo: todo lo que se ve en el panel llega
+  de la API con la sesión de quien mira. Lo que no se puede ver, la API no lo entrega.
+
+`/verificar-correo` es el aterrizaje del enlace de confirmación del registro, y vive en la
+raíz porque es la ruta que nobelio trae en `URL_VERIFICACION_CORREO`.
 
 ## Qué no es
 
-No lleva registro, ni inicio de sesión, ni panel, ni sesión, ni estado, ni llamadas a la
-API en tiempo de ejecución. Todo eso vive en otro proyecto. El resultado de `npm run build`
-son archivos estáticos que se pueden servir desde cualquier CDN o Pages sin backend.
+No es un software contable ni sustituye al ERP: el panel da de alta y mantiene emisores,
+pero la habilitación ante la DIAN (certificado, software, resoluciones) y la emisión de
+documentos siguen haciéndose por la API.
 
 ## Stack
 

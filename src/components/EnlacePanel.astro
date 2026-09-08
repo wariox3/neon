@@ -1,0 +1,27 @@
+---
+/**
+ * Sustituye a `SocialIcons` de Starlight para colar el enlace al panel en la
+ * cabecera de la documentación, junto a los iconos que ya había.
+ */
+import Default from '@astrojs/starlight/components/SocialIcons.astro';
+---
+
+<a class="enlace-panel" href="/app/">Entrar al panel</a>
+<Default><slot /></Default>
+
+<style>
+  .enlace-panel {
+    white-space: nowrap;
+    font-size: var(--sl-text-sm);
+    font-weight: 600;
+    text-decoration: none;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--sl-color-accent);
+    border-radius: 0.35rem;
+    color: var(--sl-color-white);
+  }
+
+  .enlace-panel:hover {
+    background: var(--sl-color-accent);
+  }
+</style>

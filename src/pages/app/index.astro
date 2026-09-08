@@ -1,0 +1,13 @@
+---
+/**
+ * Puerta del panel. No decide nada por su cuenta: pregunta a la API quién es
+ * quien llega y lo manda a los emisores o al ingreso. El sitio es estático, así
+ * que esta decisión no puede tomarse en el servidor.
+ */
+import Panel from '../../layouts/Panel.astro';
+import Entrada from '../../components/app/Entrada.tsx';
+---
+
+<Panel titulo="Panel" navegacion={false}>
+  <Entrada client:only="react" />
+</Panel>

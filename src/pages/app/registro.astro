@@ -1,0 +1,10 @@
+---
+import Panel from '../../layouts/Panel.astro';
+import Registro from '../../components/app/Registro.tsx';
+---
+
+<Panel titulo="Crear una cuenta" navegacion={false}>
+  <div class="panel-contenido--estrecho">
+    <Registro client:only="react" />
+  </div>
+</Panel>
