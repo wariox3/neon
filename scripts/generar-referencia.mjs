@@ -116,18 +116,30 @@ function tipoLegible(esquema, nodo) {
   if (s.enum) return s.enum.map((v) => `\`${JSON.stringify(v)}\``).join(' · ');
   if (s.type === 'array') {
     const item = s.items?.$ref ? nombreDeRef(s.items) : resolverRef(esquema, s.items).type;
-    return `array<${item ?? 'any'}>`;
+    return `\`array<${item ?? 'any'}>\``;
   }
   const base = s.type ?? (s.properties ? 'object' : 'any');
   return s.format ? `${base} (${s.format})` : base;
 }
 
-/** Filas `nombre · tipo · obligatorio · descripción` de las propiedades de un objeto. */
-function filasDePropiedades(esquema, nodo) {
+/**
+ * Propiedades de un objeto que se muestran en un contexto dado: en una petición
+ * no van las `readOnly` —las pone el servidor— y en una respuesta no van las
+ * `writeOnly`, que solo se envían.
+ */
+function propiedadesDeContexto(esquema, nodo, contexto) {
   const s = resolverRef(esquema, nodo);
-  const propiedades = s.properties ?? {};
+  return Object.entries(s.properties ?? {}).filter(([, prop]) => {
+    const resuelta = resolverRef(esquema, prop);
+    return contexto === 'peticion' ? !resuelta.readOnly : !resuelta.writeOnly;
+  });
+}
+
+/** Filas `nombre · tipo · obligatorio · descripción` de las propiedades de un objeto. */
+function filasDePropiedades(esquema, nodo, contexto) {
+  const s = resolverRef(esquema, nodo);
   const obligatorias = new Set(s.required ?? []);
-  return Object.entries(propiedades).map(([nombre, prop]) => {
+  return propiedadesDeContexto(esquema, nodo, contexto).map(([nombre, prop]) => {
     const resuelta = resolverRef(esquema, prop);
     const notas = [resuelta.description];
     if (resuelta.readOnly) notas.push('Solo lectura.');
@@ -141,8 +153,8 @@ function filasDePropiedades(esquema, nodo) {
   });
 }
 
-/** Valor de ejemplo a partir del esquema, para el cuerpo del `curl`. */
-function ejemploDeEsquema(esquema, nodo, profundidad = 0) {
+/** Valor de ejemplo a partir del esquema, para el cuerpo del `curl` y las respuestas. */
+function ejemploDeEsquema(esquema, nodo, contexto, profundidad = 0) {
   const s = resolverRef(esquema, nodo);
   if (s.example !== undefined) return s.example;
   if (s.default !== undefined) return s.default;
@@ -151,7 +163,7 @@ function ejemploDeEsquema(esquema, nodo, profundidad = 0) {
 
   switch (s.type) {
     case 'array':
-      return [ejemploDeEsquema(esquema, s.items ?? {}, profundidad + 1)];
+      return [ejemploDeEsquema(esquema, s.items ?? {}, contexto, profundidad + 1)];
     case 'integer':
       return s.minimum ?? 1;
     case 'number':
@@ -172,9 +184,8 @@ function ejemploDeEsquema(esquema, nodo, profundidad = 0) {
 
   if (s.properties) {
     const salida = {};
-    for (const [nombre, prop] of Object.entries(s.properties)) {
-      if (resolverRef(esquema, prop).readOnly) continue;
-      salida[nombre] = ejemploDeEsquema(esquema, prop, profundidad + 1);
+    for (const [nombre, prop] of propiedadesDeContexto(esquema, nodo, contexto)) {
+      salida[nombre] = ejemploDeEsquema(esquema, prop, contexto, profundidad + 1);
     }
     return salida;
   }
@@ -210,25 +221,83 @@ function urlBase(esquema) {
   ).replace(/\/+$/, '');
 }
 
+/** Requisitos de seguridad que aplican a una operación (los suyos o los del esquema). */
+function requisitosDeSeguridad(esquema, op) {
+  return op.security ?? esquema.security ?? [];
+}
+
+/**
+ * Cómo viaja una credencial en el ejemplo, según su definición en
+ * `components.securitySchemes`. Si la descripción del esquema muestra la
+ * credencial literal —`Authorization: Api-Key <prefijo>.<secreto>`—, se usa esa:
+ * es lo único que dice cómo se compone el valor. Si no, se deduce del tipo.
+ */
+function credencialDeEjemplo(nombre, def) {
+  if (!def) return null;
+
+  // El nombre de la cabecera viene de un esquema ajeno: se escapa antes de meterlo
+  // en la expresión regular, para que un nombre raro no rompa la compilación.
+  const literal = (cabecera) => {
+    const patron = cabecera.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const encontrado = new RegExp(`\`\\s*${patron}\\s*:\\s*([^\`]+)\``).exec(def.description ?? '');
+    return encontrado?.[1].trim() ?? null;
+  };
+
+  if (def.type === 'apiKey') {
+    if (!def.name) return null;
+    const valor = (def.in === 'header' && literal(def.name)) || `<${nombre.toLowerCase()}>`;
+    return { en: def.in, nombre: def.name, valor };
+  }
+
+  // `http` y los flujos OAuth acaban todos en una cabecera Authorization.
+  const tipo = def.type === 'http' ? (def.scheme ?? 'bearer').toLowerCase() : 'bearer';
+  const marca = tipo.charAt(0).toUpperCase() + tipo.slice(1);
+  const valor =
+    literal('Authorization') ?? `${marca} <${tipo === 'basic' ? 'credenciales' : 'token'}>`;
+  return { en: 'header', nombre: 'Authorization', valor };
+}
+
+/**
+ * Credenciales del ejemplo. Cada entrada de `security` es una alternativa y sus
+ * claves se exigen a la vez; para el `curl` basta con la primera que se sepa
+ * representar. Sin requisitos no se manda ninguna.
+ */
+function credencialesDeEjemplo(esquema, op) {
+  const definiciones = esquema.components?.securitySchemes ?? {};
+  for (const alternativa of requisitosDeSeguridad(esquema, op)) {
+    const credenciales = Object.keys(alternativa)
+      .map((nombre) => credencialDeEjemplo(nombre, definiciones[nombre]))
+      .filter(Boolean);
+    if (credenciales.length) return credenciales;
+  }
+  return [];
+}
+
 function ejemploCurl(esquema, { ruta, metodo, op, parametros }) {
   const base = urlBase(esquema);
   const rutaConcreta = ruta.replace(/\{([^}]+)\}/g, '<$1>');
-  const consulta = parametros
-    .map((p) => resolverRef(esquema, p))
-    .filter((p) => p.in === 'query' && p.required)
-    .map((p) => `${p.name}=<${p.name}>`)
-    .join('&');
+  const credenciales = credencialesDeEjemplo(esquema, op);
+  const consulta = [
+    ...parametros
+      .map((p) => resolverRef(esquema, p))
+      .filter((p) => p.in === 'query' && p.required)
+      .map((p) => `${p.name}=<${p.name}>`),
+    ...credenciales.filter((c) => c.en === 'query').map((c) => `${c.nombre}=${c.valor}`),
+  ].join('&');
   const url = `${base}${rutaConcreta}${consulta ? `?${consulta}` : ''}`;
 
   const lineas = [];
   const verbo = metodo.toUpperCase();
   lineas.push(`curl${verbo === 'GET' ? '' : ` -X ${verbo}`} "${url}" \\`);
-  lineas.push(`  -H "Authorization: Api-Key <prefijo>.<secreto>" \\`);
+  for (const credencial of credenciales) {
+    if (credencial.en === 'header') lineas.push(`  -H "${credencial.nombre}: ${credencial.valor}" \\`);
+    if (credencial.en === 'cookie') lineas.push(`  -b "${credencial.nombre}=${credencial.valor}" \\`);
+  }
 
   const cuerpo = op.requestBody?.content?.['application/json']?.schema;
   if (cuerpo) {
     lineas.push(`  -H "Content-Type: application/json" \\`);
-    const json = JSON.stringify(ejemploDeEsquema(esquema, cuerpo), null, 2)
+    const json = JSON.stringify(ejemploDeEsquema(esquema, cuerpo, 'peticion'), null, 2)
       .split('\n')
       .join('\n  ');
     lineas.push(`  -d '${json}'`);
@@ -255,8 +324,8 @@ function tablaDeParametros(esquema, parametros) {
   ].join('\n');
 }
 
-function tablaDePropiedades(esquema, nodo, titulo, { obligatorio = true } = {}) {
-  const filas = filasDePropiedades(esquema, nodo);
+function tablaDePropiedades(esquema, nodo, titulo, { obligatorio = true, contexto } = {}) {
+  const filas = filasDePropiedades(esquema, nodo, contexto);
   if (!filas.length) return '';
   const cabecera = obligatorio
     ? ['| Campo | Tipo | Obligatorio | Descripción |', '| --- | --- | --- | --- |']
@@ -285,7 +354,7 @@ function bloqueDeCuerpo(esquema, op) {
   );
   if (op.requestBody.description) partes.push(textoSeguro(op.requestBody.description), '');
   if (nodo) {
-    const tabla = tablaDePropiedades(esquema, nodo, '### Campos');
+    const tabla = tablaDePropiedades(esquema, nodo, '### Campos', { contexto: 'peticion' });
     if (tabla) partes.push(tabla);
   }
   return partes.join('\n');
@@ -310,9 +379,10 @@ function bloqueDeRespuestas(esquema, op) {
     if (!nodo) continue;
     const tabla = tablaDePropiedades(esquema, nodo, `### \`${codigo}\` — cuerpo`, {
       obligatorio: false,
+      contexto: 'respuesta',
     });
     if (tabla) partes.push(tabla, '');
-    const ejemplo = ejemploDeEsquema(esquema, nodo);
+    const ejemplo = ejemploDeEsquema(esquema, nodo, 'respuesta');
     if (ejemplo && typeof ejemplo === 'object') {
       partes.push('```json', JSON.stringify(ejemplo, null, 2), '```', '');
     }
@@ -321,7 +391,7 @@ function bloqueDeRespuestas(esquema, op) {
 }
 
 function bloqueDeSeguridad(esquema, op) {
-  const requisitos = op.security ?? esquema.security ?? [];
+  const requisitos = requisitosDeSeguridad(esquema, op);
   if (!requisitos.length) {
     return ['## Autenticación', '', 'No requiere credencial.', ''].join('\n');
   }
@@ -382,7 +452,7 @@ function avisoProvisional(provisional) {
   if (!provisional) return '';
   return [
     ':::caution[Esquema provisional]',
-    'Esta página se generó con el esquema de ejemplo del repositorio, no con el de Nobelio.',
+    'Esta página se generó con el esquema de ejemplo del repositorio, no con el de RedEDoc.',
     'Las rutas, los campos y las respuestas van a cambiar cuando se conecte el esquema real.',
     ':::',
     '',
@@ -394,7 +464,7 @@ function paginaIndice(esquema, porEtiqueta, provisional, origen) {
   const partes = [
     '---',
     'title: "Referencia de la API"',
-    'description: "Endpoints de Nobelio generados a partir de su esquema OpenAPI."',
+    'description: "Endpoints de RedEDoc generados a partir de su esquema OpenAPI."',
     'sidebar:',
     '  order: 0',
     '  label: "Vista general"',

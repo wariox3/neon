@@ -7,7 +7,7 @@ sidebar:
 
 ## Gratis y sin garantías
 
-Nobelio se ofrece **sin costo**. A cambio, y esto conviene leerlo antes de integrarlo:
+RedEDoc se ofrece **sin costo**. A cambio, y esto conviene leerlo antes de integrarlo:
 
 - **No hay acuerdo de nivel de servicio (SLA).** No se compromete disponibilidad,
   tiempo de respuesta ni ventana de mantenimiento.
@@ -15,7 +15,7 @@ Nobelio se ofrece **sin costo**. A cambio, y esto conviene leerlo antes de integ
   respuesta asegurada.
 - **No hay garantía de continuidad.** El servicio puede cambiar o dejar de estar
   disponible.
-- **La responsabilidad tributaria sigue siendo del emisor.** Nobelio es una herramienta
+- **La responsabilidad tributaria sigue siendo del emisor.** RedEDoc es una herramienta
   para emitir; no sustituye la obligación de facturar correctamente ni la asesoría
   contable.
 

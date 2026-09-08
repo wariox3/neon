@@ -1,11 +1,11 @@
 ---
-title: Qué es Nobelio
+title: Qué es RedEDoc
 description: "Un servicio de facturación electrónica DIAN por API REST: emite el documento, genera el XML UBL, lo firma y lo envía."
 sidebar:
   order: 1
 ---
 
-Nobelio es un **servicio de facturación electrónica para Colombia**: recibe un documento
+RedEDoc es un **servicio de facturación electrónica para Colombia**: recibe un documento
 por su API REST y se encarga de todo lo que la DIAN exige entre ese momento y el acuse.
 
 ```
@@ -66,5 +66,5 @@ Técnico, XSD, listas de valores y guía de Web Services.
 - **No guarda una cartera de clientes.** Los datos del adquiriente van dentro de cada
   documento, y cada documento conserva su copia: la que quedó firmada en el XML y entró
   en el CUFE.
-- **No emite por ti.** Tu sistema decide qué se factura y cuándo; Nobelio lo convierte en
+- **No emite por ti.** Tu sistema decide qué se factura y cuándo; RedEDoc lo convierte en
   un documento electrónico válido.

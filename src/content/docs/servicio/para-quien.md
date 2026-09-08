@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-Nobelio está pensado para **quien ya tiene un sistema donde ocurre la venta** y solo
+RedEDoc está pensado para **quien ya tiene un sistema donde ocurre la venta** y solo
 necesita que esa venta llegue a la DIAN como documento electrónico válido.
 
 ## Encaja bien si…
@@ -21,7 +21,7 @@ necesita que esa venta llegue a la DIAN como documento electrónico válido.
 
 ## Probablemente no encaja si…
 
-- Buscas una **aplicación para facturar a mano**, con formularios y listados. Nobelio es
+- Buscas una **aplicación para facturar a mano**, con formularios y listados. RedEDoc es
   una API: no trae interfaz.
 - Necesitas **garantías de disponibilidad o soporte contractual**. El servicio es gratuito
   y *best-effort*; ver [Alcance y límites](/servicio/alcance-y-limites/).
@@ -36,4 +36,4 @@ necesita que esa venta llegue a la DIAN como documento electrónico válido.
 | Datos de habilitación del software | La DIAN: `identificador`, `pin` y `test_set_id`. |
 | Un sistema que llame a la API | Tu ERP, tu POS o el desarrollo que lo integre. |
 
-El resto —XML, identificadores, firma, envío, PDF— lo pone Nobelio.
+El resto —XML, identificadores, firma, envío, PDF— lo pone RedEDoc.

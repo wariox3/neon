@@ -2,9 +2,9 @@
   "openapi": "3.0.3",
   "x-neon-provisional": true,
   "info": {
-    "title": "Nobelio API",
+    "title": "RedEDoc API",
     "version": "0.0.0-provisional",
-    "description": "ESQUEMA PROVISIONAL, escrito a mano para montar el pipeline de la referencia.\n\nNo describe la API real ni está completo: solo recoge, del README de Nobelio, unas pocas operaciones representativas para que las páginas de referencia se puedan generar y revisar antes de que el backend exponga su esquema.\n\nSe reemplaza apuntando `OPENAPI_SOURCE` al `openapi.json` que genere drf-spectacular."
+    "description": "ESQUEMA PROVISIONAL, escrito a mano para montar el pipeline de la referencia.\n\nNo describe la API real ni está completo: solo recoge, del README de RedEDoc, unas pocas operaciones representativas para que las páginas de referencia se puedan generar y revisar antes de que el backend exponga su esquema.\n\nSe reemplaza apuntando `OPENAPI_SOURCE` al `openapi.json` que genere drf-spectacular."
   },
   "servers": [
     {

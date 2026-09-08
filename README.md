@@ -1,6 +1,6 @@
 # neon
 
-Sitio público de **Nobelio**, el servicio gratuito de facturación electrónica DIAN para
+Sitio público de **RedEDoc**, el servicio gratuito de facturación electrónica DIAN para
 Colombia: la cara con la que la gente lo descubre y aprende a usarlo.
 
 Son tres cosas y nada más:
@@ -83,7 +83,7 @@ se pueda montar y revisar antes de que el backend exponga su esquema. Está marc
 
 ### Cómo se conecta el esquema real
 
-Nobelio expondrá su esquema con [drf-spectacular](https://drf-spectacular.readthedocs.io).
+RedEDoc expondrá su esquema con [drf-spectacular](https://drf-spectacular.readthedocs.io).
 Cuando exista, basta con apuntar `OPENAPI_SOURCE` a él:
 
 ```bash
@@ -99,7 +99,7 @@ Copiar `.env.example` a `.env` sirve para el desarrollo local.
 
 Cuando el esquema real llegue:
 
-1. Apunta `OPENAPI_SOURCE` al esquema de Nobelio.
+1. Apunta `OPENAPI_SOURCE` al esquema de RedEDoc.
 2. Comprueba que el aviso de «esquema provisional» desaparece de las páginas generadas.
 3. Borra `openapi/ejemplo.json` — o déjalo solo como referencia del formato.
 4. Revisa las guías: los ejemplos de `curl` están escritos a mano y pueden haber quedado
@@ -141,7 +141,7 @@ neon/
 ## Sobre el contenido
 
 - Todo en español, para público colombiano.
-- El material de origen es el README del proyecto Nobelio. **No se inventan hechos**: no
+- El material de origen es el README del proyecto RedEDoc. **No se inventan hechos**: no
   hay números de resolución, artículos, plazos ni afirmaciones sobre la DIAN que no vengan
   de ahí. Lo que falta queda como un `TODO` visible en la página, no relleno.
 - El servicio es gratuito pero *best-effort*: el sitio no promete disponibilidad, soporte

@@ -19,7 +19,7 @@ export default defineConfig({
   build: { format: 'directory' },
   integrations: [
     starlight({
-      title: 'Nobelio',
+      title: 'RedEDoc',
       description:
         'Servicio gratuito de facturación electrónica DIAN para Colombia: ' +
         'factura de venta, notas crédito y débito, documento soporte y nómina electrónica.',
