@@ -1,0 +1,405 @@
+{
+  "openapi": "3.0.3",
+  "x-neon-provisional": true,
+  "info": {
+    "title": "Nobelio API",
+    "version": "0.0.0-provisional",
+    "description": "ESQUEMA PROVISIONAL, escrito a mano para montar el pipeline de la referencia.\n\nNo describe la API real ni está completo: solo recoge, del README de Nobelio, unas pocas operaciones representativas para que las páginas de referencia se puedan generar y revisar antes de que el backend exponga su esquema.\n\nSe reemplaza apuntando `OPENAPI_SOURCE` al `openapi.json` que genere drf-spectacular."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Desarrollo local. TODO: añadir la URL base del servicio publicado."
+    }
+  ],
+  "tags": [
+    { "name": "Seguridad", "description": "Obtención y refresco del token JWT." },
+    { "name": "Catálogos", "description": "Listas oficiales DIAN, de solo lectura." },
+    { "name": "Emisores", "description": "Alta del emisor (OFE) y sus datos de habilitación." },
+    { "name": "Documentos", "description": "Ciclo de vida del documento electrónico." }
+  ],
+  "security": [{ "LlaveApi": [] }, { "JWT": [] }],
+  "paths": {
+    "/api/seguridad/token/": {
+      "post": {
+        "operationId": "seguridad_token_crear",
+        "tags": ["Seguridad"],
+        "summary": "Obtener un token JWT",
+        "description": "Canjea usuario y contraseña por un par de tokens. Es la vía de las aplicaciones con usuario delante; las integraciones de ERP usan una llave de API.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SolicitudToken" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Par de tokens emitido.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ParDeTokens" }
+              }
+            }
+          },
+          "401": {
+            "description": "Credenciales inválidas.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalogos/tipo-identificacion/": {
+      "get": {
+        "operationId": "catalogos_tipo_identificacion_listar",
+        "tags": ["Catálogos"],
+        "summary": "Listar tipos de identificación",
+        "description": "Catálogo DIAN de tipos de documento de identidad. Los catálogos son de solo lectura y sirven para obtener los ids que piden el emisor y el documento.",
+        "parameters": [
+          { "$ref": "#/components/parameters/Busqueda" },
+          { "$ref": "#/components/parameters/Pagina" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de resultados.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaginaDeCatalogo" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/emisores/emisor/": {
+      "post": {
+        "operationId": "emisores_emisor_crear",
+        "tags": ["Emisores"],
+        "summary": "Crear un emisor (OFE)",
+        "description": "Da de alta el obligado a facturar. La cuenta no se envía: se deduce de la credencial. `pais`, `departamento` y `municipio` van por código (ISO 3166 y DANE), no por id.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/Emisor" } }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Emisor creado.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Emisor" } }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos o emisor ya dado de alta en la cuenta.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/emisores/emisor/validar-nit/": {
+      "get": {
+        "operationId": "emisores_emisor_validar_nit",
+        "tags": ["Emisores"],
+        "summary": "Comprobar un NIT",
+        "description": "Consulta el NIT para comprobarlo y autocompletar el formulario de alta.",
+        "parameters": [
+          {
+            "name": "nit",
+            "in": "query",
+            "required": true,
+            "description": "NIT sin dígito de verificación.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Datos encontrados para ese NIT.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "razon_social": { "type": "string" },
+                    "digito_verificacion": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documentos/documento/": {
+      "post": {
+        "operationId": "documentos_documento_crear",
+        "tags": ["Documentos"],
+        "summary": "Crear un documento",
+        "description": "Registra el documento con su receptor, sus líneas y sus impuestos. Los totales se calculan a partir de los detalles. Todavía no genera XML ni se envía a la DIAN.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/Documento" } }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Documento creado en estado borrador.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Documento" } }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, o el consecutivo no cabe en el rango autorizado por la resolución.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/documentos/documento/{id}/emitir/": {
+      "post": {
+        "operationId": "documentos_documento_emitir",
+        "tags": ["Documentos"],
+        "summary": "Emitir el documento",
+        "description": "Genera el XML UBL 2.1, calcula el identificador (CUFE, CUDE o CUDS según el tipo) y lo firma con el certificado del emisor.",
+        "parameters": [{ "$ref": "#/components/parameters/IdDocumento" }],
+        "responses": {
+          "200": {
+            "description": "Documento firmado.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/RespuestaEmision" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/documentos/documento/{id}/enviar/": {
+      "post": {
+        "operationId": "documentos_documento_enviar",
+        "tags": ["Documentos"],
+        "summary": "Enviar el documento a la DIAN",
+        "description": "Entrega el documento firmado al Web Service de la DIAN y aplica el resultado. El documento queda en `aceptado`, `rechazado` o —si la DIAN aún no resuelve— `enviado`.",
+        "parameters": [{ "$ref": "#/components/parameters/IdDocumento" }],
+        "responses": {
+          "200": {
+            "description": "Resultado del envío.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/RespuestaEnvio" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/documentos/documento/{id}/consultar/": {
+      "get": {
+        "operationId": "documentos_documento_consultar",
+        "tags": ["Documentos"],
+        "summary": "Consultar el estado en la DIAN",
+        "description": "Consulta sin efectos: devuelve lo que dice la DIAN y no toca el documento.",
+        "parameters": [{ "$ref": "#/components/parameters/IdDocumento" }],
+        "responses": {
+          "200": {
+            "description": "Estado según la DIAN.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/RespuestaEnvio" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/documentos/documento/{id}/pdf/": {
+      "get": {
+        "operationId": "documentos_documento_pdf",
+        "tags": ["Documentos"],
+        "summary": "Descargar la representación gráfica",
+        "description": "Devuelve el PDF con el código QR.",
+        "parameters": [{ "$ref": "#/components/parameters/IdDocumento" }],
+        "responses": {
+          "200": {
+            "description": "El PDF del documento.",
+            "content": { "application/pdf": { "schema": { "type": "string", "format": "binary" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "LlaveApi": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "Llave de API de una integración: `Authorization: Api-Key <prefijo>.<secreto>`."
+      },
+      "JWT": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Token de acceso: `Authorization: Bearer <access>`."
+      }
+    },
+    "parameters": {
+      "IdDocumento": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Identificador del documento.",
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "Busqueda": {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Filtra por texto.",
+        "schema": { "type": "string" }
+      },
+      "Pagina": {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "Número de página.",
+        "schema": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "schemas": {
+      "SolicitudToken": {
+        "type": "object",
+        "required": ["correo", "clave"],
+        "properties": {
+          "correo": { "type": "string", "format": "email" },
+          "clave": { "type": "string", "format": "password" }
+        }
+      },
+      "ParDeTokens": {
+        "type": "object",
+        "properties": {
+          "access": { "type": "string", "description": "Token de acceso." },
+          "refresh": { "type": "string", "description": "Token de refresco." }
+        }
+      },
+      "PaginaDeCatalogo": {
+        "type": "object",
+        "properties": {
+          "count": { "type": "integer" },
+          "next": { "type": "string", "nullable": true },
+          "previous": { "type": "string", "nullable": true },
+          "results": { "type": "array", "items": { "$ref": "#/components/schemas/ItemDeCatalogo" } }
+        }
+      },
+      "ItemDeCatalogo": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "description": "Id de la fila. Es un serial de cada base: cambia entre ambientes." },
+          "codigo": { "type": "string", "description": "Código oficial DIAN." },
+          "nombre": { "type": "string" }
+        }
+      },
+      "Emisor": {
+        "type": "object",
+        "required": ["razon_social", "tipo_identificacion", "numero_identificacion", "pais", "departamento", "municipio", "direccion", "correo"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "readOnly": true },
+          "razon_social": { "type": "string" },
+          "tipo_identificacion": { "type": "integer", "description": "Id del catálogo de tipos de identificación." },
+          "numero_identificacion": { "type": "string" },
+          "digito_verificacion": { "type": "string" },
+          "tipo_organizacion": { "type": "integer" },
+          "responsabilidades": { "type": "array", "items": { "type": "integer" } },
+          "pais": { "type": "string", "description": "Código ISO 3166, p. ej. `CO`." },
+          "departamento": { "type": "string", "description": "Código DANE del departamento." },
+          "municipio": { "type": "string", "description": "Código DANE del municipio." },
+          "direccion": { "type": "string" },
+          "correo": { "type": "string", "format": "email" }
+        }
+      },
+      "Adquiriente": {
+        "type": "object",
+        "description": "Receptor del documento. Va dentro del documento: cada uno guarda su copia, que es la que queda firmada en el XML. En el documento soporte este bloque es el vendedor.",
+        "required": ["razon_social", "tipo_identificacion", "numero_identificacion"],
+        "properties": {
+          "razon_social": { "type": "string" },
+          "tipo_identificacion": { "type": "integer" },
+          "numero_identificacion": { "type": "string" },
+          "digito_verificacion": { "type": "string" },
+          "tipo_organizacion": { "type": "integer" },
+          "pais": { "type": "integer" }
+        }
+      },
+      "Impuesto": {
+        "type": "object",
+        "required": ["tributo", "base_gravable", "tarifa", "valor"],
+        "properties": {
+          "tributo": { "type": "integer", "description": "Id del catálogo de tributos." },
+          "base_gravable": { "type": "string", "format": "decimal" },
+          "tarifa": { "type": "string", "format": "decimal" },
+          "valor": { "type": "string", "format": "decimal" }
+        }
+      },
+      "Detalle": {
+        "type": "object",
+        "required": ["numero_linea", "descripcion", "cantidad", "unidad_medida", "valor_unitario", "valor_total"],
+        "properties": {
+          "numero_linea": { "type": "integer" },
+          "descripcion": { "type": "string" },
+          "cantidad": { "type": "string", "format": "decimal" },
+          "unidad_medida": { "type": "integer" },
+          "valor_unitario": { "type": "string", "format": "decimal" },
+          "valor_total": { "type": "string", "format": "decimal" },
+          "impuestos": { "type": "array", "items": { "$ref": "#/components/schemas/Impuesto" } }
+        }
+      },
+      "Documento": {
+        "type": "object",
+        "required": ["documento_tipo", "emisor", "adquiriente", "fecha_emision", "moneda", "detalles"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "readOnly": true },
+          "documento_tipo": { "type": "string", "description": "Id de la fila de `DocumentoTipo` (`factura_venta`, `nota_credito`, `nota_debito`, `documento_soporte`, `nota_ajuste`, `nomina`)." },
+          "emisor": { "type": "string", "format": "uuid" },
+          "numero_resolucion": { "type": "string", "description": "Número que la DIAN le dio a la resolución del emisor. Las notas no lo llevan: heredan la numeración del documento que corrigen." },
+          "documento_referencia": { "type": "string", "format": "uuid", "description": "Documento que corrige. Obligatorio en notas." },
+          "concepto_correccion": { "type": "integer", "description": "Concepto de corrección, de la lista propia de cada tipo de nota." },
+          "adquiriente": { "$ref": "#/components/schemas/Adquiriente" },
+          "prefijo": { "type": "string" },
+          "consecutivo": { "type": "integer" },
+          "numero": { "type": "string" },
+          "fecha_emision": { "type": "string", "format": "date" },
+          "hora_emision": { "type": "string" },
+          "moneda": { "type": "integer" },
+          "estado": { "type": "string", "readOnly": true },
+          "cufe_cude": { "type": "string", "readOnly": true },
+          "detalles": { "type": "array", "items": { "$ref": "#/components/schemas/Detalle" } }
+        }
+      },
+      "RespuestaEmision": {
+        "type": "object",
+        "properties": {
+          "estado": { "type": "string", "example": "firmado" },
+          "cufe_cude": { "type": "string" }
+        }
+      },
+      "RespuestaEnvio": {
+        "type": "object",
+        "properties": {
+          "estado": { "type": "string" },
+          "track_id": { "type": "string" },
+          "es_valido": { "type": "boolean" },
+          "errores": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "detail": { "type": "string" }
+        }
+      }
+    }
+  }
+}

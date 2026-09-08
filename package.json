@@ -1,0 +1,26 @@
+{
+  "name": "neon",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sitio público de Nobelio: facturación electrónica DIAN (Colombia)",
+  "scripts": {
+    "referencia": "node scripts/generar-referencia.mjs",
+    "predev": "npm run referencia",
+    "dev": "astro dev",
+    "prebuild": "npm run referencia",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.36.0",
+    "astro": "^5.14.0",
+    "sharp": "^0.34.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "typescript": "^5.9.3"
+  }
+}

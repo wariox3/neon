@@ -1,0 +1,70 @@
+---
+title: Nobelio
+description: Servicio gratuito de facturación electrónica DIAN para Colombia. Factura de venta, notas crédito y débito, documento soporte y nómina electrónica, por API REST.
+template: splash
+hero:
+  tagline: Facturación electrónica DIAN por API. Gratis, y con el pipeline completo — XML UBL 2.1, CUFE, firma XAdES y envío a la DIAN — resuelto por dentro.
+  actions:
+    - text: Empezar
+      link: /guias/empezar/
+      icon: right-arrow
+      variant: primary
+    - text: Referencia de la API
+      link: /api/
+      icon: open-book
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard, Aside } from '@astrojs/starlight/components';
+
+<Aside type="caution" title="Servicio gratuito, sin garantías">
+Nobelio se ofrece **gratis y tal cual**: es un servicio *best-effort*, sin acuerdo de nivel
+de servicio, sin disponibilidad comprometida y sin soporte garantizado. Quien lo integre
+asume esa condición.
+</Aside>
+
+## Qué hace
+
+<CardGrid>
+  <Card title="Emite ante la DIAN" icon="document">
+    Factura de venta, notas crédito y débito, documento soporte y su nota de ajuste, y
+    nómina electrónica.
+  </Card>
+  <Card title="El pipeline completo" icon="setting">
+    Documento → XML UBL 2.1 → CUFE/CUDE → firma XAdES-EPES → envío al Web Service de la
+    DIAN → PDF con código QR.
+  </Card>
+  <Card title="Una API REST y ya" icon="puzzle">
+    Sin sesiones ni cookies: el ERP se autentica con una llave de API y todo el ciclo de
+    vida del documento se hace por HTTP.
+  </Card>
+  <Card title="Conforme al Anexo Técnico" icon="approve-check">
+    Anexo Técnico v1.9 (Resolución DIAN 000165 de 2023), con el XML validado contra los
+    XSD oficiales y los identificadores verificados contra los ejemplos del Anexo.
+  </Card>
+</CardGrid>
+
+## Por dónde seguir
+
+<CardGrid>
+  <LinkCard
+    title="Qué es Nobelio"
+    href="/servicio/que-es/"
+    description="El servicio en concreto: qué emite, cómo lo emite y qué no hace."
+  />
+  <LinkCard
+    title="Empezar"
+    href="/guias/empezar/"
+    description="De la credencial al primer documento emitido, en orden."
+  />
+  <LinkCard
+    title="Autenticación"
+    href="/guias/autenticacion/"
+    description="Llave de API para el ERP, JWT para las aplicaciones con usuario."
+  />
+  <LinkCard
+    title="Referencia de la API"
+    href="/api/"
+    description="Endpoints generados a partir del esquema OpenAPI del servicio."
+  />
+</CardGrid>

@@ -1,0 +1,61 @@
+/* Paleta de neon. Acento verde-cian sobre grises fríos, legible en claro y oscuro. */
+:root {
+  --sl-color-accent-low: #172f26;
+  --sl-color-accent: #0f8b5f;
+  --sl-color-accent-high: #9be5c2;
+
+  --sl-color-white: #ffffff;
+  --sl-color-gray-1: #eceff4;
+  --sl-color-gray-2: #c0c7d1;
+  --sl-color-gray-3: #869099;
+  --sl-color-gray-4: #545d67;
+  --sl-color-gray-5: #353b43;
+  --sl-color-gray-6: #24282e;
+  --sl-color-black: #17191c;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #c7efdb;
+  --sl-color-accent: #0a7a52;
+  --sl-color-accent-high: #0a3c2c;
+
+  --sl-color-white: #17191c;
+  --sl-color-gray-1: #24282e;
+  --sl-color-gray-2: #353b43;
+  --sl-color-gray-3: #545d67;
+  --sl-color-gray-4: #869099;
+  --sl-color-gray-5: #c0c7d1;
+  --sl-color-gray-6: #eceff4;
+  --sl-color-gray-7: #f4f6f9;
+  --sl-color-black: #ffffff;
+}
+
+/* Rótulo de método HTTP en la referencia generada. */
+.metodo-http {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 0.25rem;
+  font-family: var(--__sl-font-mono);
+  font-size: var(--sl-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--sl-color-black);
+  background: var(--sl-color-gray-5);
+  vertical-align: 0.1em;
+}
+.metodo-http[data-metodo='get'] { background: #7fc8f8; }
+.metodo-http[data-metodo='post'] { background: #8ee0b4; }
+.metodo-http[data-metodo='put'],
+.metodo-http[data-metodo='patch'] { background: #f5d78e; }
+.metodo-http[data-metodo='delete'] { background: #f5a3a3; }
+
+/* La ruta del endpoint, junto al método. */
+.ruta-endpoint {
+  font-family: var(--__sl-font-mono);
+  font-size: var(--sl-text-sm);
+  word-break: break-all;
+}
+
+/* Tablas de parámetros y respuestas: que respiren. */
+.sl-markdown-content table { font-size: var(--sl-text-sm); }
+.sl-markdown-content table :is(td, th) { vertical-align: top; }
