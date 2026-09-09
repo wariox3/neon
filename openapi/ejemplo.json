@@ -8,8 +8,8 @@
   },
   "servers": [
     {
-      "url": "http://localhost:8000",
-      "description": "Desarrollo local. TODO: añadir la URL base del servicio publicado."
+      "url": "https://api.rededoc.co",
+      "description": "Servicio publicado."
     }
   ],
   "tags": [

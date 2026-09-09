@@ -18,7 +18,7 @@ El documento se registra con su receptor, sus líneas y sus impuestos. **Los tot
 calculan a partir de los detalles**: no se envían.
 
 ```bash
-curl -X POST http://localhost:8000/api/documentos/documento/ \
+curl -X POST https://api.rededoc.co/api/documentos/documento/ \
   -H "Content-Type: application/json" -H "Authorization: Api-Key $API_KEY" \
   -d '{
     "documento_tipo": "<id-tipo>",
@@ -63,7 +63,7 @@ Tres cosas que conviene tener claras:
 Genera el XML UBL, calcula el identificador y lo firma.
 
 ```bash
-curl -X POST http://localhost:8000/api/documentos/documento/<id>/emitir/ \
+curl -X POST https://api.rededoc.co/api/documentos/documento/<id>/emitir/ \
   -H "Authorization: Api-Key $API_KEY"
 # → { "estado": "firmado", "cufe_cude": "8bb918b1...f5bd9b4" }
 ```
@@ -73,7 +73,7 @@ Hasta aquí no ha salido nada hacia la DIAN: el documento está firmado y listo.
 ## 3. Enviar a la DIAN
 
 ```bash
-curl -X POST http://localhost:8000/api/documentos/documento/<id>/enviar/ \
+curl -X POST https://api.rededoc.co/api/documentos/documento/<id>/enviar/ \
   -H "Authorization: Api-Key $API_KEY"
 # → { "estado": "...", "track_id": "...", "es_valido": true/false, "errores": [...] }
 ```
@@ -93,11 +93,11 @@ Dos llamadas distintas, y la diferencia importa:
 ```bash
 # Consulta sin efectos: devuelve lo que dice la DIAN, no toca el documento.
 curl -H "Authorization: Api-Key $API_KEY" \
-  http://localhost:8000/api/documentos/documento/<id>/consultar/
+  https://api.rededoc.co/api/documentos/documento/<id>/consultar/
 
 # Aplica el resultado al documento (solo si está enviado o rechazado).
 curl -X POST -H "Authorization: Api-Key $API_KEY" \
-  http://localhost:8000/api/documentos/documento/<id>/actualizar-estado/
+  https://api.rededoc.co/api/documentos/documento/<id>/actualizar-estado/
 ```
 
 Para un panel o un monitoreo, `consultar`. Para cerrar el ciclo y dejar el documento en su
@@ -107,10 +107,10 @@ estado definitivo, `actualizar-estado`.
 
 ```bash
 curl -H "Authorization: Api-Key $API_KEY" \
-  http://localhost:8000/api/documentos/documento/<id>/xml/ -o factura.xml
+  https://api.rededoc.co/api/documentos/documento/<id>/xml/ -o factura.xml
 
 curl -H "Authorization: Api-Key $API_KEY" \
-  http://localhost:8000/api/documentos/documento/<id>/pdf/ -o factura.pdf
+  https://api.rededoc.co/api/documentos/documento/<id>/pdf/ -o factura.pdf
 ```
 
 El XML firmado es el documento con valor legal. El PDF es la representación gráfica, con

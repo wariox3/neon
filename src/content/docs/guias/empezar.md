@@ -9,8 +9,8 @@ Esta guía recorre el camino completo la primera vez. Cada paso tiene su página
 detalle; aquí está el orden y el porqué de cada uno.
 
 :::note[URL base]
-Los ejemplos usan `http://localhost:8000`. TODO: reemplazar por la URL del servicio
-publicado cuando esté definida.
+Los ejemplos apuntan a `https://api.rededoc.co`, que es la API en producción. Para
+desarrollo local, cambia esa base por la de tu instancia.
 :::
 
 ## 1. Conseguir una credencial
@@ -26,7 +26,7 @@ por la API, que es el que automatiza un ERP.
 El registro es público:
 
 ```bash
-curl -X POST http://localhost:8000/api/seguridad/registro/ \
+curl -X POST https://api.rededoc.co/api/seguridad/registro/ \
   -H "Content-Type: application/json" \
   -d '{"email": "tu@empresa.co", "password": "..."}'
 ```
@@ -36,7 +36,7 @@ Confirma el correo con el enlace que llega, inicia sesión en
 llave de tu integración:
 
 ```bash
-curl -X POST http://localhost:8000/api/seguridad/llave-api/ \
+curl -X POST https://api.rededoc.co/api/seguridad/llave-api/ \
   -H "Content-Type: application/json" --cookie cookies.txt \
   -d '{"nombre": "ERP producción"}'
 ```
@@ -65,13 +65,13 @@ lectura y se consultan con la misma credencial:
 
 ```bash
 curl -H "Authorization: Api-Key $API_KEY" \
-  "http://localhost:8000/api/catalogos/tipo-identificacion/"
+  "https://api.rededoc.co/api/catalogos/tipo-identificacion/"
 
 curl -H "Authorization: Api-Key $API_KEY" \
-  "http://localhost:8000/api/catalogos/tributo/?search=IVA"
+  "https://api.rededoc.co/api/catalogos/tributo/?search=IVA"
 
 curl -H "Authorization: Api-Key $API_KEY" \
-  "http://localhost:8000/api/catalogos/municipio/?search=Medell"
+  "https://api.rededoc.co/api/catalogos/municipio/?search=Medell"
 ```
 
 :::caution[Los ids no son portables]
@@ -85,7 +85,7 @@ El emisor es el obligado a facturar (el OFE). Queda **a nombre de quien lo da de
 el dueño no se envía en el cuerpo, sale de la credencial.
 
 ```bash
-curl -X POST http://localhost:8000/api/emisores/emisor/ \
+curl -X POST https://api.rededoc.co/api/emisores/emisor/ \
   -H "Content-Type: application/json" -H "Authorization: Api-Key $API_KEY" \
   -d '{
     "razon_social": "Empresa Demo SAS",

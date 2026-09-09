@@ -29,7 +29,7 @@ recupera: se crea otra.
 export API_KEY='<prefijo>.<secreto>'
 
 curl -H "Authorization: Api-Key $API_KEY" \
-  http://localhost:8000/api/catalogos/tributo/
+  https://api.rededoc.co/api/catalogos/tributo/
 ```
 
 Esta vía es **stateless**: no usa cookies ni sesión, y cada petición se identifica sola.
@@ -41,7 +41,7 @@ persona ve y administra las suyas — con formulario, en
 [el panel](/app/llaves/); o por la API:
 
 ```bash
-curl -X POST http://localhost:8000/api/seguridad/llave-api/ \
+curl -X POST https://api.rededoc.co/api/seguridad/llave-api/ \
   -H "Content-Type: application/json" --cookie cookies.txt \
   -d '{"nombre": "ERP producción"}'
 ```
@@ -76,7 +76,7 @@ la garantía. Un cliente que no sea navegador usa la llave de API, que es el otr
 ### 1. Registrarse y confirmar el correo
 
 ```bash
-curl -X POST http://localhost:8000/api/seguridad/registro/ \
+curl -X POST https://api.rededoc.co/api/seguridad/registro/ \
   -H "Content-Type: application/json" \
   -d '{"email": "persona@empresa.co", "password": "...", "nombre_corto": "Ana"}'
 ```
@@ -88,7 +88,7 @@ y se puede pedir otro en `POST /api/seguridad/registro/reenviar/`.
 ### 2. Iniciar sesión
 
 ```bash
-curl -X POST http://localhost:8000/api/seguridad/token/ \
+curl -X POST https://api.rededoc.co/api/seguridad/token/ \
   -H "Content-Type: application/json" --cookie-jar cookies.txt \
   -d '{"email": "persona@empresa.co", "password": "..."}'
 ```
@@ -116,7 +116,7 @@ Responde el desafío:
 y la sesión se emite al resolverlo:
 
 ```bash
-curl -X POST http://localhost:8000/api/seguridad/token/mfa/ \
+curl -X POST https://api.rededoc.co/api/seguridad/token/mfa/ \
   -H "Content-Type: application/json" --cookie-jar cookies.txt \
   -d '{"mfa_token": "...", "codigo": "123456", "recordar_dispositivo": true}'
 ```
@@ -131,11 +131,39 @@ El segundo factor se administra desde la propia cuenta, ya con la sesión inicia
 `/api/seguridad/mfa/`: `metodos/`, estado, `enrolar/`, `confirmar/`, `desactivar/` y
 `codigos-respaldo/`. Los códigos de respaldo se muestran una sola vez, al confirmar.
 
-### 4. Renovar y cerrar
+### 4. Recuperar la contraseña
+
+Si se pierde, se pide un enlace y se fija una nueva. Son dos llamadas:
 
 ```bash
-curl -X POST http://localhost:8000/api/seguridad/token/refresh/ --cookie cookies.txt --cookie-jar cookies.txt
-curl -X POST http://localhost:8000/api/seguridad/token/cerrar/  --cookie cookies.txt
+# 1. Pedir el enlace
+curl -X POST https://api.rededoc.co/api/seguridad/token/recuperar/ \
+  -H "Content-Type: application/json" \
+  -d '{"email": "persona@empresa.co"}'
+
+# 2. Fijar la contraseña nueva, con el token que llegó por correo
+curl -X POST https://api.rededoc.co/api/seguridad/token/restablecer/ \
+  -H "Content-Type: application/json" \
+  -d '{"token": "<el de la query string>", "password": "<la nueva>"}'
+```
+
+`recuperar/` responde **siempre `200` con el mismo texto**, exista o no la cuenta. Es
+deliberado: si la respuesta cambiara, el endpoint sería un comprobador de quién está
+registrado en la plataforma. No deduzcas nada de ella ni digas al usuario «ese correo no
+existe». El correo solo sale hacia cuentas activas.
+
+El enlace apunta a `/restablecer-clave?token=…` del sitio, la página que pide la
+contraseña nueva. `restablecer/` responde `400` con `detail` si el token no vale o ya
+caducó, y con el error colgando de `errores.password` si la contraseña no pasa los
+validadores — el mínimo son **diez caracteres**, no los ocho de fábrica de Django.
+
+Restablecer **no abre sesión**: después hay que iniciarla como siempre.
+
+### 5. Renovar y cerrar
+
+```bash
+curl -X POST https://api.rededoc.co/api/seguridad/token/refresh/ --cookie cookies.txt --cookie-jar cookies.txt
+curl -X POST https://api.rededoc.co/api/seguridad/token/cerrar/  --cookie cookies.txt
 ```
 
 `refresh/` no lleva cuerpo: usa la cookie. Cada refresco entrega un token nuevo y **anula

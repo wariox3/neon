@@ -14,7 +14,7 @@ Un `.p12` emitido por una entidad de certificación autorizada. Se sube junto co
 y se valida en el momento:
 
 ```bash
-curl -X POST http://localhost:8000/api/emisores/certificado/cargar/ \
+curl -X POST https://api.rededoc.co/api/emisores/certificado/cargar/ \
   -H "Authorization: Api-Key $API_KEY" \
   -F "emisor=<id-emisor>" \
   -F "archivo=@certificado.p12" \
@@ -28,7 +28,7 @@ Va primero porque **sin certificado activo y vigente no se puede registrar el so
 Los datos que entrega la DIAN al registrar el software de facturación:
 
 ```bash
-curl -X POST http://localhost:8000/api/emisores/emisor/crear-habilitacion/ \
+curl -X POST https://api.rededoc.co/api/emisores/emisor/crear-habilitacion/ \
   -H "Content-Type: application/json" -H "Authorization: Api-Key $API_KEY" \
   -d '{
     "emisor": "<id-emisor>",
@@ -47,7 +47,7 @@ curl -X POST http://localhost:8000/api/emisores/emisor/crear-habilitacion/ \
 Se puede traer de la DIAN con su clave técnica:
 
 ```bash
-curl -X POST http://localhost:8000/api/emisores/resolucion/importar-dian/ \
+curl -X POST https://api.rededoc.co/api/emisores/resolucion/importar-dian/ \
   -H "Content-Type: application/json" -H "Authorization: Api-Key $API_KEY" \
   -d '{"emisor": "<id-emisor>", "clave_tecnica": "<clave-tecnica>"}'
 ```

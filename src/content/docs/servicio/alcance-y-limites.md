@@ -50,9 +50,6 @@ Cosas que el proyecto declara abiertas, para que nadie se lleve una sorpresa:
 
 ## Lo que no está resuelto aquí
 
-- **Recuperación de contraseña.** El registro y la confirmación del correo ya son
-  públicos, pero todavía no hay un flujo documentado para recuperar el acceso si se pierde
-  la contraseña. TODO.
-- **La URL del servicio publicado.** TODO: fijarla y reemplazar `http://localhost:8000` en
-  los ejemplos.
-- **Canal de contacto.** TODO.
+- **El esquema de la API es provisional.** La referencia de `/api/` se genera hoy desde un
+  esquema de ejemplo escrito a mano; las rutas y los campos van a cambiar cuando el
+  servicio exponga el suyo. Cada página generada lo avisa.
