@@ -1,15 +1,18 @@
 /**
  * Alta y edición de un emisor.
  *
- * Dos cosas que el formulario no manda nunca, aunque el emisor las tenga:
+ * Lo que el formulario no manda nunca, aunque el emisor lo tenga:
  *
  * - `usuario`: el dueño lo pone el servidor con quien hace la petición. Es de
  *   solo lectura precisamente para que nadie dé de alta a nombre de otro.
  * - `digito_verificacion`: lo calcula el modelo al guardar (`dv_de_entidad`).
  *   Mandarlo solo serviría para que la respuesta contradijera a la petición.
+ * - `activo` y los `habilitado_*`: los administra el backend. Aquí solo se
+ *   miran, en la tabla de habilitación ante la DIAN.
  *
- * La ubicación viaja por **código** (ISO 3166 y DANE), no por id: los ids son
- * seriales de cada base y cambian entre ambientes.
+ * La ubicación y las responsabilidades fiscales viajan por **código** (ISO 3166,
+ * DANE y el del RUT), no por id: los ids son seriales de cada base y cambian
+ * entre ambientes.
  */
 import { type SubmitEvent, useEffect, useState } from 'react';
 
@@ -26,9 +29,16 @@ import {
 } from '../../lib/catalogos';
 import { useSesion } from '../../lib/sesion';
 import SelectorBuscado from './SelectorBuscado';
-import { Aviso, Campo, Cargando, ErrorGeneral, Marca, SesionNoLista, errorDe } from './piezas';
+import { Campo, Cargando, ErrorGeneral, Marca, SesionNoLista, errorDe } from './piezas';
 
 const AMBIENTES: Record<number, string> = { 1: 'Producción', 2: 'Habilitación' };
+
+/**
+ * Un emisor solo se da de alta con NIT o cédula de ciudadanía, así que el resto
+ * del catálogo DIAN no se ofrece. Se filtra por **código**, no por id: los ids
+ * son seriales de cada base y cambian entre ambientes.
+ */
+const IDENTIFICACIONES_EMISOR = ['31', '13'];
 
 interface Emisor {
   id: number;
@@ -38,7 +48,7 @@ interface Emisor {
   numero_identificacion: string;
   digito_verificacion: string;
   tipo_organizacion: number | null;
-  responsabilidades: number[];
+  responsabilidades: string[];
   pais: string;
   departamento: string;
   municipio: string;
@@ -56,25 +66,13 @@ interface Emisor {
   ambiente_documento_equivalente: number;
 }
 
-/** Lo que el RUES devuelve para autocompletar. */
-interface Rues {
-  existe: boolean;
-  razon_social?: string;
-  digito_verificacion?: string;
-  correo?: string;
-  direccion?: string;
-  telefono?: string;
-  activa?: boolean;
-  estado_matricula?: string;
-}
-
 const VACIO = {
   razon_social: '',
   nombre_comercial: '',
   tipo_identificacion: '',
   numero_identificacion: '',
   tipo_organizacion: '',
-  responsabilidades: [] as number[],
+  responsabilidades: [] as string[],
   pais: 'CO',
   departamento: '',
   municipio: '',
@@ -83,9 +81,6 @@ const VACIO = {
   correo: '',
   correo_copia: '',
   telefono: '',
-  activo: true,
-  habilitado_nomina: false,
-  habilitado_documento_equivalente: false,
 };
 
 type Formulario = typeof VACIO;
@@ -98,8 +93,6 @@ export default function EmisorFormulario() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [enviando, setEnviando] = useState(false);
-  const [rues, setRues] = useState<Rues | null>(null);
-  const [consultandoRues, setConsultandoRues] = useState(false);
 
   const [tiposIdentificacion, setTiposIdentificacion] = useState<Item[]>([]);
   const [tiposOrganizacion, setTiposOrganizacion] = useState<Item[]>([]);
@@ -114,7 +107,13 @@ export default function EmisorFormulario() {
   // paralelo con el emisor en vez de esperar a saber quién mira.
   useEffect(() => {
     void Promise.all([
-      catalogo(TIPO_IDENTIFICACION).then(setTiposIdentificacion),
+      catalogo(TIPO_IDENTIFICACION).then((tipos) =>
+        setTiposIdentificacion(
+          IDENTIFICACIONES_EMISOR.flatMap(
+            (codigo) => tipos.find((tipo) => tipo.codigo === codigo) ?? [],
+          ),
+        ),
+      ),
       catalogo(TIPO_ORGANIZACION).then(setTiposOrganizacion),
       catalogo(RESPONSABILIDAD_FISCAL).then(setResponsabilidades),
       catalogo(DEPARTAMENTO).then(setDepartamentos),
@@ -145,9 +144,6 @@ export default function EmisorFormulario() {
           correo: emisor.correo ?? '',
           correo_copia: emisor.correo_copia ?? '',
           telefono: emisor.telefono ?? '',
-          activo: emisor.activo,
-          habilitado_nomina: emisor.habilitado_nomina,
-          habilitado_documento_equivalente: emisor.habilitado_documento_equivalente,
         });
       })
       .catch(setError)
@@ -156,34 +152,6 @@ export default function EmisorFormulario() {
 
   function poner<C extends keyof Formulario>(campo: C, valor: Formulario[C]) {
     setDatos((previo) => ({ ...previo, [campo]: valor }));
-  }
-
-  async function consultarRues() {
-    const nit = datos.numero_identificacion.trim();
-    if (!nit) return;
-    setConsultandoRues(true);
-    setRues(null);
-    try {
-      const respuesta = await api<Rues>(
-        `/api/emisores/emisor/validar-nit/?nit=${encodeURIComponent(nit)}`,
-      );
-      setRues(respuesta);
-      if (respuesta.existe) {
-        // Solo se rellena lo que está vacío: quien ya escribió algo a mano tiene
-        // sus motivos, y el RUES no siempre trae el dato más actual.
-        setDatos((previo) => ({
-          ...previo,
-          razon_social: previo.razon_social || respuesta.razon_social || '',
-          correo: previo.correo || respuesta.correo || '',
-          direccion: previo.direccion || respuesta.direccion || '',
-          telefono: previo.telefono || respuesta.telefono || '',
-        }));
-      }
-    } catch (fallo) {
-      setError(fallo);
-    } finally {
-      setConsultandoRues(false);
-    }
   }
 
   async function guardar(evento: SubmitEvent<HTMLFormElement>) {
@@ -206,9 +174,6 @@ export default function EmisorFormulario() {
       correo: datos.correo,
       correo_copia: datos.correo_copia,
       telefono: datos.telefono,
-      activo: datos.activo,
-      habilitado_nomina: datos.habilitado_nomina,
-      habilitado_documento_equivalente: datos.habilitado_documento_equivalente,
     };
 
     try {
@@ -286,37 +251,6 @@ export default function EmisorFormulario() {
         </Campo>
       </div>
 
-      <div className="acciones" style={{ marginTop: 0 }}>
-        <button
-          type="button"
-          className="secundario"
-          disabled={consultandoRues || !datos.numero_identificacion.trim()}
-          onClick={() => void consultarRues()}
-        >
-          {consultandoRues ? 'Consultando el RUES…' : 'Consultar el RUES'}
-        </button>
-        <span className="campo__ayuda">
-          Trae los datos de la cámara de comercio para no teclearlos. Es opcional: el alta
-          no lo exige.
-        </span>
-      </div>
-
-      {rues && (
-        <Aviso tipo={rues.existe ? 'exito' : 'error'}>
-          {rues.existe ? (
-            <p>
-              <strong>{rues.razon_social}</strong> — matrícula {rues.estado_matricula ?? '—'}.
-              Rellenamos lo que estaba vacío.
-            </p>
-          ) : (
-            <p>
-              El RUES no encuentra ese número. Puedes seguir igualmente: el alta no lo
-              consulta.
-            </p>
-          )}
-        </Aviso>
-      )}
-
       <div className="rejilla">
         <Campo
           id="razon_social"
@@ -380,13 +314,15 @@ export default function EmisorFormulario() {
             <label key={responsabilidad.id} className="casilla">
               <input
                 type="checkbox"
-                checked={datos.responsabilidades.includes(responsabilidad.id)}
+                checked={datos.responsabilidades.includes(responsabilidad.codigo)}
                 onChange={(e) =>
                   poner(
                     'responsabilidades',
                     e.target.checked
-                      ? [...datos.responsabilidades, responsabilidad.id]
-                      : datos.responsabilidades.filter((r) => r !== responsabilidad.id),
+                      ? [...datos.responsabilidades, responsabilidad.codigo]
+                      : datos.responsabilidades.filter(
+                          (r) => r !== responsabilidad.codigo,
+                        ),
                   )
                 }
               />
@@ -510,56 +446,6 @@ export default function EmisorFormulario() {
           onChange={(e) => poner('correo_copia', e.target.value)}
         />
       </Campo>
-
-      <h2>Estado</h2>
-
-      <div className="campo campo--casilla">
-        <input
-          id="activo"
-          type="checkbox"
-          checked={datos.activo}
-          onChange={(e) => poner('activo', e.target.checked)}
-        />
-        <label htmlFor="activo">Activo. Desactivarlo corta la emisión de este emisor.</label>
-      </div>
-
-      <div className="campo campo--casilla">
-        <input
-          id="habilitado_nomina"
-          type="checkbox"
-          checked={datos.habilitado_nomina}
-          onChange={(e) => poner('habilitado_nomina', e.target.checked)}
-        />
-        <label htmlFor="habilitado_nomina">
-          La DIAN ya lo habilitó para <strong>nómina electrónica</strong>
-        </label>
-      </div>
-      {errorDe(error, 'ambiente_nomina') && (
-        <span className="campo__error">{errorDe(error, 'ambiente_nomina')}</span>
-      )}
-
-      <div className="campo campo--casilla">
-        <input
-          id="habilitado_documento_equivalente"
-          type="checkbox"
-          checked={datos.habilitado_documento_equivalente}
-          onChange={(e) => poner('habilitado_documento_equivalente', e.target.checked)}
-        />
-        <label htmlFor="habilitado_documento_equivalente">
-          La DIAN ya lo habilitó para <strong>documento equivalente</strong> (P.O.S.)
-        </label>
-      </div>
-      {errorDe(error, 'ambiente_documento_equivalente') && (
-        <span className="campo__error">
-          {errorDe(error, 'ambiente_documento_equivalente')}
-        </span>
-      )}
-
-      <p className="campo__ayuda">
-        Estas dos casillas constatan un trámite que ya ocurrió ante la DIAN; no lo hacen.
-        Un emisor en ambiente de producción sin la casilla marcada se rechaza, porque todo
-        lo que emitiera se rechazaría igualmente.
-      </p>
 
       {guardado && (
         <>

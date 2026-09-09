@@ -104,14 +104,8 @@ curl -X POST http://localhost:8000/api/emisores/emisor/ \
 justamente porque el id cambia entre ambientes. El servidor resuelve el código contra el
 catálogo; si no existe, responde `400` en ese campo.
 
-El alta no consulta el RUES. Lo que sí se rechaza es repetir una identificación ya dada de
-alta: el NIT es único en toda la plataforma, esté a nombre de quien esté. Para comprobar un
-NIT y autocompletar el formulario:
-
-```bash
-curl -H "Authorization: Api-Key $API_KEY" \
-  "http://localhost:8000/api/emisores/emisor/validar-nit/?nit=<NIT>"
-```
+Lo que sí se rechaza es repetir una identificación ya dada de alta: el NIT es único en toda
+la plataforma, esté a nombre de quien esté.
 
 ## 4. Habilitar al emisor ante la DIAN
 
