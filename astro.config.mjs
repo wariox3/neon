@@ -60,6 +60,7 @@ export default defineConfig({
       // la navegación: se enlaza a mano.
       components: {
         SocialIcons: './src/components/EnlacePanel.astro',
+        Footer: './src/components/PieDePagina.astro',
       },
       lastUpdated: true,
       sidebar: [

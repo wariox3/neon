@@ -180,7 +180,6 @@ neon/
 
 - URL del servicio publicado (los ejemplos usan `http://localhost:8000`).
 - Cómo se solicita una cuenta y una llave de API: hoy las crea el equipo por consola.
-- Canal de contacto.
 - Topes de peticiones efectivos de la instancia publicada.
 - Documento equivalente P.O.S.: su XML está validado contra el XSD oficial, pero no forma
   parte del flujo de emisión de la API.

@@ -6,7 +6,8 @@ sidebar:
 ---
 
 RedEDoc es un **servicio de facturación electrónica para Colombia**: recibe un documento
-por su API REST y se encarga de todo lo que la DIAN exige entre ese momento y el acuse.
+por su API REST y se encarga de todo lo que la DIAN exige entre ese momento y el acuse. Lo
+presta [Semántica Digital S.A.S.](https://www.semantica.com.co)
 
 ```
 Documento → XML UBL 2.1 → CUFE/CUDE → Firma XAdES-EPES → Envío WS DIAN → PDF+QR

@@ -445,3 +445,13 @@ tbody tr:last-child td {
   color: var(--sl-color-white);
   filter: none;
 }
+
+/* Atribución de la empresa, al pie de todas las pantallas del panel. */
+.panel-pie {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem 2.5rem;
+  border-top: 1px solid var(--panel-borde);
+  color: var(--sl-color-gray-3);
+  font-size: 0.8125rem;
+}

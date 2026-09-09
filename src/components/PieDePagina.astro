@@ -1,0 +1,16 @@
+---
+/**
+ * Envuelve el pie de Starlight para añadir debajo la atribución de la empresa.
+ *
+ * Se envuelve en vez de sustituir para no perder lo que el pie ya trae: la
+ * paginación entre páginas y la fecha de última actualización.
+ */
+import Default from '@astrojs/starlight/components/Footer.astro';
+---
+
+<Default><slot /></Default>
+
+<p class="pie-marca">
+  RedEDoc es un servicio de
+  <a href="https://www.semantica.com.co" rel="noopener">Semántica Digital S.A.S.</a>
+</p>
