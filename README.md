@@ -73,6 +73,10 @@ npm run build     # → dist/
 Cloudflare Pages, Netlify, Vercel, GitHub Pages o cualquier CDN, todos en su capa gratuita.
 El comando de compilación es `npm run build` y el directorio de salida es `dist`.
 
+En producción el sitio va en `rededoc.co` y la API en `api.rededoc.co`, servidos con nginx
+desde un Ubuntu Server. El paso a paso —Node, nginx, HTTPS, variables de entorno y el
+script de actualización— está en [DEPLOY.md](DEPLOY.md).
+
 > **TODO:** fijar `site` en `astro.config.mjs` con el dominio definitivo. Sin eso Astro no
 > genera el sitemap y las URLs canónicas quedan relativas.
 

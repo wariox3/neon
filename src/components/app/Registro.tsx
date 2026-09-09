@@ -19,7 +19,6 @@ interface Alta {
 export default function Registro() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [nombre, setNombre] = useState('');
   const [alta, setAlta] = useState<Alta | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [enviando, setEnviando] = useState(false);
@@ -38,11 +37,7 @@ export default function Registro() {
     try {
       const respuesta = await api<Alta>('/api/seguridad/registro/', {
         metodo: 'POST',
-        cuerpo: {
-          email,
-          password,
-          ...(nombre.trim() ? { nombre_corto: nombre.trim() } : {}),
-        },
+        cuerpo: { email, password },
       });
       setAlta(respuesta);
     } catch (fallo) {
@@ -159,20 +154,6 @@ export default function Registro() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-        />
-      </Campo>
-
-      <Campo
-        id="nombre_corto"
-        etiqueta="Nombre"
-        error={errorDe(error, 'nombre_corto')}
-        ayuda="Opcional. Es como te saluda el panel."
-      >
-        <input
-          id="nombre_corto"
-          autoComplete="given-name"
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
         />
       </Campo>
 
