@@ -8,8 +8,10 @@
  * `src/content/docs/api/` más el fragmento de barra lateral que consume
  * `astro.config.mjs`.
  *
+ * Por defecto lee el esquema publicado del servicio. Para trabajar contra otro:
+ *
+ *   OPENAPI_SOURCE=http://localhost:8000/api/schema/?format=json npm run build
  *   OPENAPI_SOURCE=../nobelio/openapi.json npm run build
- *   OPENAPI_SOURCE=https://api.ejemplo.co/api/schema/?format=json npm run build
  */
 
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
@@ -18,7 +20,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const ORIGEN = process.env.OPENAPI_SOURCE?.trim() || './openapi/ejemplo.json';
+const ESQUEMA_PUBLICADO = 'https://api.rededoc.co/api/schema/?format=json';
+const ORIGEN = process.env.OPENAPI_SOURCE?.trim() || ESQUEMA_PUBLICADO;
 const EJEMPLO = resolve(RAIZ, 'openapi/ejemplo.json');
 const CACHE = resolve(RAIZ, 'openapi/.cache/openapi.json');
 const SALIDA = resolve(RAIZ, 'src/content/docs/api');

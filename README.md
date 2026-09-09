@@ -88,48 +88,47 @@ Las páginas de `/api/` **se generan en tiempo de compilación** con
 `src/content/docs/api/`, más el fragmento de barra lateral `src/generated/sidebar-api.json`
 que consume `astro.config.mjs`.
 
-Las dos rutas de salida están en `.gitignore`: son artefactos de compilación. Lo que se
-versiona es el esquema y el script.
+Las dos rutas de salida están en `.gitignore`: son artefactos de compilación, igual que el
+esquema descargado. Lo que se versiona es el script.
 
 ### De dónde sale el esquema
 
-De la variable de entorno `OPENAPI_SOURCE`, que acepta **una ruta local o una URL
-`http(s)`**. Por defecto apunta al esquema de ejemplo del repositorio:
+Del **esquema publicado del servicio**, que el generador lee por defecto:
 
-```bash
-OPENAPI_SOURCE=./openapi/ejemplo.json     # por defecto
+```
+https://api.rededoc.co/api/schema/?format=json
 ```
 
-### Estado actual: esquema provisional
+Lo expone el backend con [drf-spectacular](https://drf-spectacular.readthedocs.io). No hay
+que configurar nada: `npm run build` lo descarga y regenera las páginas de `/api/`, así que
+la referencia nunca se desfasa respecto a la API.
 
-`openapi/ejemplo.json` es un esquema **escrito a mano y provisional**. No describe la API
-real ni está completo: recoge unas pocas operaciones representativas para que el pipeline
-se pueda montar y revisar antes de que el backend exponga su esquema. Está marcado con
-`"x-neon-provisional": true`, y por eso cada página generada muestra un aviso.
-
-### Cómo se conecta el esquema real
-
-RedEDoc expondrá su esquema con [drf-spectacular](https://drf-spectacular.readthedocs.io).
-Cuando exista, basta con apuntar `OPENAPI_SOURCE` a él:
+Para trabajar contra otro esquema está `OPENAPI_SOURCE`, que acepta **una ruta local o una
+URL `http(s)`**:
 
 ```bash
-# Desde un archivo, p. ej. generado con `manage.py spectacular --file openapi.json`
+OPENAPI_SOURCE=http://localhost:8000/api/schema/?format=json npm run build
 OPENAPI_SOURCE=../nobelio/openapi.json npm run build
-
-# O directamente desde el servicio
-OPENAPI_SOURCE=https://api.ejemplo.co/api/schema/?format=json npm run build
 ```
 
-En el proveedor de hosting se define la misma variable en la configuración de compilación.
-Copiar `.env.example` a `.env` sirve para el desarrollo local.
+### La compilación depende de que la API responda
 
-Cuando el esquema real llegue:
+Es la contrapartida de leer el esquema por URL. El esquema descargado se cachea en
+`openapi/.cache/`; si una compilación posterior no logra descargarlo, usa esa copia y lo
+avisa. Pero esa carpeta está en `.gitignore`, así que **en un clon nuevo, sin caché previa,
+un fallo de descarga rompe el build** en vez de publicar una referencia vacía. Es
+deliberado.
 
-1. Apunta `OPENAPI_SOURCE` al esquema de RedEDoc.
-2. Comprueba que el aviso de «esquema provisional» desaparece de las páginas generadas.
-3. Borra `openapi/ejemplo.json` — o déjalo solo como referencia del formato.
-4. Revisa las guías: los ejemplos de `curl` están escritos a mano y pueden haber quedado
-   desfasados respecto al esquema.
+En el servidor no suele morder, porque `/opt/neon` es un clon persistente y la caché
+sobrevive entre despliegues. En un CI que parte de cero, sí. Para desacoplarlo: genera el
+archivo con `manage.py spectacular --file openapi.json`, versiónalo y apunta
+`OPENAPI_SOURCE` a esa ruta.
+
+### Cuando la API cambie
+
+Las páginas de `/api/` se regeneran solas, pero **las guías no**: los ejemplos de `curl` de
+`empezar`, `autenticacion`, `flujo-emision` y `habilitacion-dian` están escritos a mano. Si
+una ruta o un campo cambia, ahí no avisa nadie.
 
 ### Detalles del generador
 
@@ -149,8 +148,7 @@ Cuando el esquema real llegue:
 neon/
 ├── astro.config.mjs        Configuración de Astro y Starlight
 ├── openapi/
-│   ├── ejemplo.json        Esquema PROVISIONAL (se reemplaza por el real)
-│   └── .cache/             Esquema descargado, si OPENAPI_SOURCE es una URL (ignorado)
+│   └── .cache/             Esquema descargado del servicio (ignorado por git)
 ├── scripts/
 │   └── generar-referencia.mjs   Esquema OpenAPI → páginas Markdown
 ├── public/                 Archivos servidos tal cual

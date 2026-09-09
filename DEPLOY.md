@@ -96,14 +96,16 @@ en blanco durante la compilación.
 cd /opt/neon
 npm ci
 export PUBLIC_API_BASE=https://api.rededoc.co
-export OPENAPI_SOURCE=./openapi/ejemplo.json     # el real, cuando exista
 npm run build
 rsync -a --delete dist/ /var/www/neon/
 ```
 
-Las variables se **exportan en el shell**, no basta con un `.env`: Astro sí lee `.env` para
-`PUBLIC_API_BASE`, pero `OPENAPI_SOURCE` lo lee `scripts/generar-referencia.mjs`, que es un
-script de Node normal y no carga `.env`.
+`PUBLIC_API_BASE` se **exporta en el shell**, no en un `.env`: Astro sí leería el `.env`,
+pero tenerla junto al resto del despliegue evita compilar sin ella por descuido. La
+referencia de la API no necesita variable: el generador ya apunta al esquema publicado.
+
+Si alguna vez defines `OPENAPI_SOURCE`, tiene que ir exportada sí o sí: la lee
+`scripts/generar-referencia.mjs`, que es un script de Node normal y no carga `.env`.
 
 > Si el servidor tiene 1 GB de RAM o menos, `astro build` puede quedarse sin memoria.
 > Alternativa: compilar en tu máquina o en CI y subir solo el resultado —
@@ -273,7 +275,6 @@ Lo único que se repite. En `/usr/local/bin/desplegar-neon` (fuera del repo, par
 set -euo pipefail
 
 export PUBLIC_API_BASE=https://api.rededoc.co
-export OPENAPI_SOURCE=./openapi/ejemplo.json
 
 cd /opt/neon
 git pull --ff-only
@@ -296,7 +297,7 @@ publicado: hay que volver a compilar y copiar.
 | Variable | Para qué | En producción |
 | --- | --- | --- |
 | `PUBLIC_API_BASE` | URL base de la API. La usa el panel de `/app/` en cada petición del navegador, y los ejemplos de la referencia. | `https://api.rededoc.co` |
-| `OPENAPI_SOURCE` | Esquema del que se genera `/api/`. Ruta local o URL `http(s)`. | `https://api.rededoc.co/api/schema/?format=json` (cuando exista) |
+| `OPENAPI_SOURCE` | Esquema del que se genera `/api/`. Ruta local o URL `http(s)`. | **No hace falta definirla**: por defecto ya lee `https://api.rededoc.co/api/schema/?format=json` |
 
 `PUBLIC_API_BASE` queda **incrustada en el JavaScript** que se manda al navegador
 (`import.meta.env`). Si no se define, el panel apunta a `http://localhost:8000` y en
@@ -333,8 +334,6 @@ y el riesgo de que un cliente de correo que reescribe enlaces se coma el token p
       sitemap y las URLs canónicas quedan relativas (hoy es un `TODO` en el archivo).
 - [ ] DNS de `rededoc.co`, `www` y `api` en Cloudflare, apuntando al origen.
 - [ ] Compilar con `PUBLIC_API_BASE=https://api.rededoc.co`.
-- [ ] Apuntar `OPENAPI_SOURCE` al esquema real. Con el de ejemplo, cada página de `/api/`
-      publica un aviso de «esquema provisional».
 - [ ] Certificado en el origen para `rededoc.co` **y** `www`, más otro para
       `api.rededoc.co`.
 - [ ] Cloudflare en **Full (strict)**. En Flexible el sitio entra en bucle de redirecciones.
@@ -345,11 +344,15 @@ y el riesgo de que un cliente de correo que reescribe enlaces se coma el token p
 
 ## Notas de operación
 
-- **Si `OPENAPI_SOURCE` es una URL, la compilación depende de que responda.** El esquema se
-  cachea en `openapi/.cache/`, pero esa carpeta está en `.gitignore`: en un clon nuevo, sin
-  caché previa, un fallo de descarga **rompe el build** en vez de publicar una referencia
-  vacía. Es deliberado. Para desacoplarlo, versiona el esquema y apunta `OPENAPI_SOURCE` a
-  esa ruta.
+- **La compilación descarga el esquema de la API.** Por defecto lo lee de
+  `https://api.rededoc.co/api/schema/?format=json`, así que la referencia de `/api/` se
+  regenera sola en cada despliegue y nunca se desfasa. Se cachea en `openapi/.cache/`: si
+  una descarga posterior falla, se usa esa copia y se avisa. Pero esa carpeta está en
+  `.gitignore`, así que en un **clon nuevo** sin caché previa un fallo de descarga **rompe
+  el build** en vez de publicar una referencia vacía. Es deliberado. En el servidor no
+  suele morder, porque `/opt/neon` es un clon persistente y la caché sobrevive entre
+  despliegues; en un CI que parte de cero, sí. Para desacoplarlo, versiona el esquema
+  (`manage.py spectacular --file`) y apunta `OPENAPI_SOURCE` a esa ruta.
 - **No hay nada protegido en lo que se sirve.** Todo lo que se ve en el panel llega de la
   API con la sesión de quien mira; no hay secretos que filtrar salvo lo que se ponga en una
   variable `PUBLIC_*`, que es pública por definición.
