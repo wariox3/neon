@@ -1,34 +1,161 @@
-/* Paleta de neon. Acento verde-cian sobre grises fríos, legible en claro y oscuro. */
-:root {
-  --sl-color-accent-low: #172f26;
-  --sl-color-accent: #0f8b5f;
-  --sl-color-accent-high: #9be5c2;
+/*
+ * Paleta y tipografía de RedEDoc.
+ *
+ * Los valores de marca salen del «Manual de Marca RedDoc» (marzo 2025):
+ * azul oxford y azul océano como corporativos, y azul agua, verde, amarillo y
+ * grises como secundarios. La tipografía es Roboto.
+ *
+ * Los tonos de interfaz (fondos, grises, enlaces) se derivan del azul oxford en
+ * lugar de usar grises neutros: así toda la pantalla queda en la misma familia
+ * fría del logo. Cada pareja texto/fondo se eligió comprobando su contraste;
+ * los valores anotados son ratios WCAG y ninguno de los de texto baja de 4.5:1.
+ */
 
-  --sl-color-white: #ffffff;
-  --sl-color-gray-1: #eceff4;
-  --sl-color-gray-2: #c0c7d1;
-  --sl-color-gray-3: #869099;
-  --sl-color-gray-4: #545d67;
-  --sl-color-gray-5: #353b43;
-  --sl-color-gray-6: #24282e;
-  --sl-color-black: #17191c;
+:root {
+  /* --- Colores de marca, tal cual vienen del manual ---------------------- */
+  --marca-oxford: #13263c;
+  --marca-oceano: #009ef7;
+  --marca-agua: #5bc6d8;
+  --marca-verde: #5cc361;
+  --marca-verde-claro: #ceedcf;
+  --marca-amarillo: #f7d84a;
+  --marca-gris: #cccccc;
+  --marca-gris-claro: #f2f2f2;
 }
 
-:root[data-theme='light'] {
-  --sl-color-accent-low: #c7efdb;
-  --sl-color-accent: #0a7a52;
-  --sl-color-accent-high: #0a3c2c;
+/* --- Tema oscuro (el de partida) ---------------------------------------- */
+:root {
+  /*
+   * El azul océano puro no vale para texto sobre oscuro con holgura, así que
+   * los enlaces usan una versión aclarada y el botón lo usa de fondo con el
+   * oxford encima (6.2:1).
+   */
+  --sl-color-accent-low: #0a2b47;
+  --sl-color-accent: #0079c2;
+  --sl-color-accent-high: #8fd5fc; /* 11.2:1 sobre el fondo */
 
-  --sl-color-white: #17191c;
-  --sl-color-gray-1: #24282e;
-  --sl-color-gray-2: #353b43;
-  --sl-color-gray-3: #545d67;
-  --sl-color-gray-4: #869099;
-  --sl-color-gray-5: #c0c7d1;
-  --sl-color-gray-6: #eceff4;
-  --sl-color-gray-7: #f4f6f9;
+  --sl-color-white: #f5f8fb; /* 16.8:1 */
+  --sl-color-gray-1: #e6ecf3; /* 15.1:1 */
+  --sl-color-gray-2: #b9c6d6; /* 10.3:1 */
+  --sl-color-gray-3: #8496ad; /*  5.9:1 — texto secundario */
+  --sl-color-gray-4: #55677e; /*  bordes y trazos, no texto */
+  --sl-color-gray-5: #2e4058;
+  --sl-color-gray-6: #1a2c44;
+  --sl-color-black: #0b1826; /* oxford oscurecido: el fondo */
+}
+
+/* --- Tema claro ---------------------------------------------------------- */
+:root[data-theme='light'] {
+  --sl-color-accent-low: #d6eefc;
+  --sl-color-accent: #0079c2; /* blanco encima: 4.7:1 */
+  --sl-color-accent-high: #00456e; /* 10.1:1 sobre blanco */
+
+  --sl-color-white: #0b1826;
+  --sl-color-gray-1: #13263c;
+  --sl-color-gray-2: #2e4058; /* 10.6:1 */
+  --sl-color-gray-3: #55677e; /*  5.8:1 — texto secundario */
+  --sl-color-gray-4: #8496ad;
+  --sl-color-gray-5: #c4d0de;
+  --sl-color-gray-6: #e6ecf3;
+  --sl-color-gray-7: #f4f7fa;
   --sl-color-black: #ffffff;
 }
+
+/*
+ * Roboto, la tipografía del manual. Se carga desde Google Fonts en el `head`
+ * (ver `astro.config.mjs` y `Panel.astro`); si no llegara, la pila de respaldo
+ * deja el sitio legible sin saltos de maquetación.
+ */
+:root {
+  --sl-font: 'Roboto', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* --- Portada -------------------------------------------------------------- */
+
+/*
+ * El titular de marca. Starlight lo pinta con un degradado de acento; aquí se
+ * refuerza el peso —el manual pide Bold o Black para titulares— y se aprieta el
+ * interletraje, que a ese cuerpo queda suelto.
+ */
+.hero h1 {
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.hero .tagline {
+  font-size: clamp(1.05rem, 0.9rem + 0.7vw, 1.375rem);
+  font-weight: 300;
+  line-height: 1.45;
+  max-width: 34ch;
+}
+
+/* La entradilla que sigue al héroe: dice a quién le habla el servicio. */
+.entradilla {
+  max-width: 62ch;
+  margin-inline: auto;
+  padding: 1.25rem 1.5rem;
+  border-left: 3px solid var(--marca-oceano);
+  border-radius: 0 var(--sl-radius, 0.5rem) var(--sl-radius, 0.5rem) 0;
+  background: var(--sl-color-gray-6);
+  font-size: var(--sl-text-lg);
+  line-height: 1.55;
+}
+
+/* MDX envuelve el texto en su propio `<p>`; el margen sobra dentro del recuadro. */
+.entradilla > p {
+  margin: 0;
+}
+
+/* Los tres pasos: qué pone cada parte. */
+.pasos {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin-block: 1.5rem;
+  padding: 0;
+  list-style: none;
+  counter-reset: paso;
+}
+
+.pasos li {
+  position: relative;
+  padding: 1.1rem 1.25rem 1.25rem 3.25rem;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.5rem;
+  background: var(--sl-color-gray-6);
+}
+
+.pasos li::before {
+  counter-increment: paso;
+  content: counter(paso);
+  position: absolute;
+  left: 1.1rem;
+  top: 1.1rem;
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: var(--marca-oceano);
+  color: var(--marca-oxford);
+  font-size: var(--sl-text-sm);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.pasos strong {
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.pasos p {
+  margin: 0;
+  color: var(--sl-color-gray-3);
+  font-size: var(--sl-text-sm);
+  line-height: 1.5;
+}
+
+/* --- Referencia de la API ------------------------------------------------- */
 
 /* Rótulo de método HTTP en la referencia generada. */
 .metodo-http {
@@ -39,15 +166,15 @@
   font-size: var(--sl-text-xs);
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: var(--sl-color-black);
-  background: var(--sl-color-gray-5);
+  color: var(--marca-oxford);
+  background: var(--marca-gris);
   vertical-align: 0.1em;
 }
-.metodo-http[data-metodo='get'] { background: #7fc8f8; }
-.metodo-http[data-metodo='post'] { background: #8ee0b4; }
+.metodo-http[data-metodo='get'] { background: var(--marca-agua); }
+.metodo-http[data-metodo='post'] { background: var(--marca-verde); }
 .metodo-http[data-metodo='put'],
-.metodo-http[data-metodo='patch'] { background: #f5d78e; }
-.metodo-http[data-metodo='delete'] { background: #f5a3a3; }
+.metodo-http[data-metodo='patch'] { background: var(--marca-amarillo); }
+.metodo-http[data-metodo='delete'] { background: #f1a3a3; }
 
 /* La ruta del endpoint, junto al método. */
 .ruta-endpoint {
@@ -59,3 +186,16 @@
 /* Tablas de parámetros y respuestas: que respiren. */
 .sl-markdown-content table { font-size: var(--sl-text-sm); }
 .sl-markdown-content table :is(td, th) { vertical-align: top; }
+
+/*
+ * Ancho del selector de tema.
+ *
+ * Starlight lo fija en `6.25em`, medida para el inglés («Auto»). En español
+ * «Automático» no cabe, y como el `select` lleva `text-overflow: ellipsis`
+ * aparece cortado como «Auto…». Dejándolo en `auto` se dimensiona con la opción
+ * más larga —el ancho no baila al cambiar de opción— y deja de depender de lo
+ * que mida la traducción.
+ */
+starlight-theme-select select {
+  width: auto;
+}

@@ -1,9 +1,9 @@
 ---
 title: RedEDoc
-description: Servicio gratuito de facturación electrónica DIAN para Colombia. Factura de venta, notas crédito y débito, documento soporte y nómina electrónica, por API REST.
+description: Emite facturas electrónicas ante la DIAN desde tu propio sistema, por API y gratis. Factura de venta, notas crédito y débito, documento soporte y nómina electrónica.
 template: splash
 hero:
-  tagline: Facturación electrónica DIAN por API. Gratis, y con el pipeline completo — XML UBL 2.1, CUFE, firma XAdES y envío a la DIAN — resuelto por dentro.
+  tagline: Emite facturas electrónicas ante la DIAN desde el sistema que ya usas. Gratis, por API, y con toda la parte técnica resuelta por dentro.
   actions:
     - text: Empezar
       link: /guias/empezar/
@@ -15,13 +15,33 @@ hero:
       variant: minimal
 ---
 
-import { Card, CardGrid, LinkCard, Aside } from '@astrojs/starlight/components';
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-<Aside type="caution" title="Servicio gratuito, sin garantías">
-RedEDoc se ofrece **gratis y tal cual**: es un servicio *best-effort*, sin acuerdo de nivel
-de servicio, sin disponibilidad comprometida y sin soporte garantizado. Quien lo integre
-asume esa condición.
-</Aside>
+<div class="entradilla">
+Dos perfiles: **fabricantes de software ERP** que facturan para sus clientes, y **empresas
+con desarrollo propio** que facturan para sí mismas. En ambos casos el documento sale del
+sistema que ya usas, sin pagarle a un proveedor tecnológico.
+</div>
+
+## Cómo funciona
+
+<ol class="pasos">
+  <li>
+    <strong>Te habilitas ante la DIAN</strong>
+    <p>Con tu certificado digital y tu resolución de facturación. Es la parte que sigue
+    siendo tuya, y la guía la lleva paso a paso.</p>
+  </li>
+  <li>
+    <strong>Tu sistema manda la venta</strong>
+    <p>Un JSON por HTTP desde tu ERP, tu POS o tu desarrollo. Te autenticas con una llave
+    de API: una cabecera y nada más.</p>
+  </li>
+  <li>
+    <strong>RedEDoc emite y responde</strong>
+    <p>XML firmado, envío a la DIAN, identificador único y PDF con código QR. Tu sistema
+    guarda lo que devuelve.</p>
+  </li>
+</ol>
 
 ## Qué hace
 
@@ -30,9 +50,9 @@ asume esa condición.
     Factura de venta, notas crédito y débito, documento soporte y su nota de ajuste, y
     nómina electrónica.
   </Card>
-  <Card title="El pipeline completo" icon="setting">
-    Documento → XML UBL 2.1 → CUFE/CUDE → firma XAdES-EPES → envío al Web Service de la
-    DIAN → PDF con código QR.
+  <Card title="De la venta a la DIAN" icon="setting">
+    Tú mandas el documento. El servicio arma el XML UBL 2.1, calcula el CUFE o el CUDE, lo
+    firma, lo envía al Web Service de la DIAN y te devuelve el PDF con su código QR.
   </Card>
   <Card title="Una API REST y ya" icon="puzzle">
     El ERP se autentica con una llave de API —una cabecera y nada más— y todo el ciclo de
@@ -58,9 +78,9 @@ asume esa condición.
     description="De la credencial al primer documento emitido, en orden."
   />
   <LinkCard
-    title="Entrar al panel"
+    title="Iniciar sesión"
     href="/app/"
-    description="Regístrate, crea tus llaves de API y gestiona tus emisores."
+    description="Tus emisores y tus llaves de API. Si aún no tienes cuenta, se crea ahí mismo."
   />
   <LinkCard
     title="Autenticación"

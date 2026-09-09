@@ -40,9 +40,10 @@ documentos siguen haciéndose por la API.
 ## Stack
 
 - [Astro](https://astro.build) con TypeScript, salida 100 % estática.
-- [Starlight](https://starlight.astro.build) para la navegación, el buscador y el tema.
+- [Starlight](https://starlight.astro.build) para la navegación y el tema. Sin buscador:
+  se desactiva con `pagefind: false`.
 - Sin framework de aplicaciones. El único JavaScript que llega al navegador es el que
-  Starlight necesita (buscador, tabla de contenidos, cambio de tema).
+  Starlight necesita (tabla de contenidos, cambio de tema) y las islas de React del panel.
 
 ## Desarrollo
 
@@ -170,7 +171,10 @@ neon/
   hay números de resolución, artículos, plazos ni afirmaciones sobre la DIAN que no vengan
   de ahí. Lo que falta queda como un `TODO` visible en la página, no relleno.
 - El servicio es gratuito pero *best-effort*: el sitio no promete disponibilidad, soporte
-  ni garantías, y eso no debería cambiar sin una decisión explícita.
+  ni garantías, y eso no debería cambiar sin una decisión explícita. El descargo vive en
+  [Alcance y límites](src/content/docs/servicio/alcance-y-limites.md), no en la portada:
+  ahí está enlazado desde la barra lateral y desde «Para quién es». Si alguna vez se
+  reescribe esa página, el descargo tiene que seguir en algún sitio visible.
 
 ### TODO pendientes en el contenido
 

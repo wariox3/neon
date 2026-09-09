@@ -29,6 +29,13 @@ const { titulo, navegacion = true } = Astro.props;
     <!-- El panel es privado: nada que indexar. -->
     <meta name="robots" content="noindex" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Roboto, la tipografía del manual de marca. La misma que carga Starlight. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap"
+    />
     <title>{titulo} · RedEDoc</title>
     <script is:inline>
       // Antes de pintar, para que no haya destello de tema claro. Es la misma

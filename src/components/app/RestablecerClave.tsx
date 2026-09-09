@@ -13,7 +13,15 @@ import { type SubmitEvent, useEffect, useState } from 'react';
 
 import { api } from '../../lib/api';
 import { AYUDA_CONTRASENA, problemaDeContrasena } from '../../lib/contrasena';
-import { Aviso, AvisoEspera, Campo, ErrorGeneral, errorDe, useEspera } from './piezas';
+import {
+  Aviso,
+  AvisoEspera,
+  Campo,
+  EntradaContrasena,
+  ErrorGeneral,
+  errorDe,
+  useEspera,
+} from './piezas';
 
 export default function RestablecerClave() {
   // `undefined` mientras no se ha leído la query; `null` si no venía.
@@ -81,15 +89,13 @@ export default function RestablecerClave() {
         error={errorPassword ?? errorDe(error, 'password')}
         ayuda={AYUDA_CONTRASENA}
       >
-        <input
+        <EntradaContrasena
           id="password"
-          type="password"
           autoComplete="new-password"
-          required
           autoFocus
-          value={password}
-          onChange={(e) => {
-            setPassword(e.target.value);
+          valor={password}
+          onCambio={(valor) => {
+            setPassword(valor);
             setErrorPassword(undefined);
           }}
         />

@@ -1,17 +1,22 @@
 ---
 title: Para quién es
-description: Empresas que ya tienen un ERP o un sistema propio y necesitan emitir ante la DIAN sin construir el pipeline.
+description: Empresas con un ERP o un sistema propio, y quien desarrolla ese software para otras, que necesitan emitir ante la DIAN sin construir el pipeline.
 sidebar:
   order: 2
 ---
 
 RedEDoc está pensado para **quien ya tiene un sistema donde ocurre la venta** y solo
-necesita que esa venta llegue a la DIAN como documento electrónico válido.
+necesita que esa venta llegue a la DIAN como documento electrónico válido. Encajan dos
+perfiles: los **fabricantes de software ERP**, que facturan para sus clientes, y las
+**empresas con desarrollo propio**, que facturan para sí mismas.
 
 ## Encaja bien si…
 
-- Tienes un **ERP, un POS o un software propio** y quieres emitir desde ahí, sin cambiar
-  de sistema ni copiar datos a un portal.
+- **Fabricas o vendes un ERP o un POS** y quieres que tus clientes emitan desde él. Una
+  cuenta puede tener varios emisores; cada uno aporta su certificado y su resolución, y el
+  NIT es único en toda la plataforma.
+- **Tienes un software propio** y quieres emitir desde ahí, sin cambiar de sistema ni
+  copiar datos a un portal.
 - Tu equipo puede **consumir una API REST**: enviar JSON, leer respuestas, guardar el
   identificador que devuelve.
 - Emites alguno de los documentos que el servicio cubre: factura de venta, notas crédito

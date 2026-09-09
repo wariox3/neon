@@ -9,7 +9,15 @@ import { type SubmitEvent, useEffect, useState } from 'react';
 
 import { api } from '../../lib/api';
 import { AYUDA_CONTRASENA, problemaDeContrasena } from '../../lib/contrasena';
-import { Aviso, AvisoEspera, Campo, ErrorGeneral, errorDe, useEspera } from './piezas';
+import {
+  Aviso,
+  AvisoEspera,
+  Campo,
+  EntradaContrasena,
+  ErrorGeneral,
+  errorDe,
+  useEspera,
+} from './piezas';
 
 interface Alta {
   email: string;
@@ -173,14 +181,12 @@ export default function Registro() {
         error={errorPassword ?? errorDe(error, 'password')}
         ayuda={AYUDA_CONTRASENA}
       >
-        <input
+        <EntradaContrasena
           id="password"
-          type="password"
           autoComplete="new-password"
-          required
-          value={password}
-          onChange={(e) => {
-            setPassword(e.target.value);
+          valor={password}
+          onCambio={(valor) => {
+            setPassword(valor);
             setErrorPassword(undefined);
           }}
         />

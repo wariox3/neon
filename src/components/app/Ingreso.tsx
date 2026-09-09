@@ -10,7 +10,7 @@
 import { type SubmitEvent, useState } from 'react';
 
 import { ErrorApi, api } from '../../lib/api';
-import { Aviso, Campo, ErrorGeneral, errorDe } from './piezas';
+import { Aviso, Campo, EntradaContrasena, ErrorGeneral, errorDe } from './piezas';
 
 /**
  * Métodos que mandan el código a algún sitio y por tanto admiten reenvío,
@@ -202,14 +202,12 @@ export default function Ingreso() {
         error={errorDe(error, 'password')}
         ayuda={<a href="/app/recuperar/">¿Olvidaste la contraseña?</a>}
       >
-        <input
+        <EntradaContrasena
           id="password"
           name="password"
-          type="password"
           autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          valor={password}
+          onCambio={setPassword}
         />
       </Campo>
 

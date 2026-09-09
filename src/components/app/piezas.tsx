@@ -99,6 +99,56 @@ export function SesionNoLista({ sesion }: { sesion: Sesion }) {
 }
 
 /**
+ * Campo de contraseña con «Ver» / «Ocultar».
+ *
+ * El interruptor solo cambia el `type` del input, así que el gestor de
+ * contraseñas del navegador sigue reconociéndolo por su `autoComplete`.
+ * Arranca oculto siempre: quien lo enseña lo decide, y no se recuerda entre
+ * pantallas para no dejar la contraseña a la vista sin querer.
+ */
+export function EntradaContrasena({
+  id,
+  valor,
+  onCambio,
+  autoComplete,
+  autoFocus = false,
+  name,
+}: {
+  id: string;
+  valor: string;
+  onCambio: (valor: string) => void;
+  autoComplete: 'current-password' | 'new-password';
+  autoFocus?: boolean;
+  name?: string;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <div className="campo-clave">
+      <input
+        id={id}
+        name={name}
+        type={visible ? 'text' : 'password'}
+        autoComplete={autoComplete}
+        autoFocus={autoFocus}
+        required
+        value={valor}
+        onChange={(e) => onCambio(e.target.value)}
+      />
+      <button
+        type="button"
+        className="campo-clave__ver"
+        aria-pressed={visible}
+        aria-controls={id}
+        onClick={() => setVisible((previo) => !previo)}
+      >
+        {visible ? 'Ocultar' : 'Ver'}
+      </button>
+    </div>
+  );
+}
+
+/**
  * Cuenta atrás de un 429.
  *
  * Mientras quede tiempo el formulario no deja reintentar: cada intento durante

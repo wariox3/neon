@@ -32,11 +32,27 @@ export default defineConfig({
       locales: {
         root: { label: 'Español', lang: 'es-CO' },
       },
-      social: [
+      // Sin buscador: se quita la barra de la cabecera y deja de generarse el
+      // índice de Pagefind en cada compilación.
+      pagefind: false,
+      // Roboto, la tipografía del manual de marca. Los pesos son los que el
+      // manual nombra: Light 300 para textos secundarios, Regular 400 para
+      // cuerpo, Medium 500 y Bold 700 para destacados, Black 900 para titulares.
+      head: [
         {
-          icon: 'github',
-          label: 'GitHub',
-          href: 'https://github.com/wariox3/neon',
+          tag: 'link',
+          attrs: { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        },
+        {
+          tag: 'link',
+          attrs: { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: 'anonymous' },
+        },
+        {
+          tag: 'link',
+          attrs: {
+            rel: 'stylesheet',
+            href: 'https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap',
+          },
         },
       ],
       customCss: ['./src/styles/custom.css'],
@@ -44,9 +60,6 @@ export default defineConfig({
       // la navegación: se enlaza a mano.
       components: {
         SocialIcons: './src/components/EnlacePanel.astro',
-      },
-      editLink: {
-        baseUrl: 'https://github.com/wariox3/neon/edit/main/',
       },
       lastUpdated: true,
       sidebar: [

@@ -9,7 +9,7 @@
   --panel-fondo-sutil: var(--sl-color-gray-6);
   --panel-radio: 0.5rem;
   --panel-error: #f5a3a3;
-  --panel-exito: #8ee0b4;
+  --panel-exito: var(--marca-verde);
 }
 
 :root[data-theme='light'] {
@@ -29,7 +29,7 @@ body {
   margin: 0;
   background: var(--sl-color-black);
   color: var(--sl-color-white);
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--sl-font);
   font-size: 1rem;
   line-height: 1.6;
 }
@@ -416,4 +416,32 @@ tbody tr:last-child td {
 
 .casilla .monospacio {
   color: var(--sl-color-gray-3);
+}
+
+/* Campo de contraseña con el interruptor «Ver» dentro. */
+.campo-clave {
+  position: relative;
+  display: flex;
+}
+
+.campo-clave input {
+  padding-right: 4.25rem;
+}
+
+.campo-clave__ver {
+  position: absolute;
+  right: 0.3rem;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background: transparent;
+  border: 0;
+  color: var(--sl-color-gray-2);
+}
+
+.campo-clave__ver:hover:not(:disabled) {
+  color: var(--sl-color-white);
+  filter: none;
 }
