@@ -1,0 +1,16 @@
+---
+/**
+ * Aterrizaje del enlace de recuperación de contraseña.
+ *
+ * Va en la raíz y no bajo `/app/` porque es la ruta que el backend trae en
+ * `URL_RESTABLECER_CLAVE`. Si allí se cambia, hay que mover esta página con ella.
+ */
+import Panel from '../layouts/Panel.astro';
+import RestablecerClave from '../components/app/RestablecerClave.tsx';
+---
+
+<Panel titulo="Restablecer la contraseña" navegacion={false}>
+  <div class="panel-contenido--estrecho">
+    <RestablecerClave client:only="react" />
+  </div>
+</Panel>

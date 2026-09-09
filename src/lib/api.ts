@@ -31,12 +31,20 @@ export type ErroresPorCampo = Record<string, string[]>;
 export class ErrorApi extends Error {
   estado: number;
   errores: ErroresPorCampo;
+  /** Segundos que faltan para poder reintentar. Solo en un 429. */
+  segundosDeEspera?: number;
 
-  constructor(estado: number, detalle: string, errores: ErroresPorCampo = {}) {
+  constructor(
+    estado: number,
+    detalle: string,
+    errores: ErroresPorCampo = {},
+    segundosDeEspera?: number,
+  ) {
     super(detalle);
     this.name = 'ErrorApi';
     this.estado = estado;
     this.errores = errores;
+    this.segundosDeEspera = segundosDeEspera;
   }
 
   /** El primer mensaje de un campo, si lo hay. */
@@ -66,6 +74,23 @@ function url(ruta: string): string {
   return ruta.startsWith('http') ? ruta : `${BASE}${ruta}`;
 }
 
+/**
+ * Cuánto hay que esperar tras un 429.
+ *
+ * `Retry-After` es lo correcto, pero no es una cabecera que el navegador deje
+ * leer entre orígenes salvo que la API la anuncie en `CORS_EXPOSE_HEADERS`. Por
+ * eso, si no está, se saca del propio mensaje, que ya trae los segundos.
+ */
+function esperaDe(respuesta: Response, detalle: string): number | undefined {
+  if (respuesta.status !== 429) return undefined;
+
+  const cabecera = Number(respuesta.headers.get('Retry-After'));
+  if (Number.isFinite(cabecera) && cabecera > 0) return Math.ceil(cabecera);
+
+  const enElMensaje = detalle.match(/(\d+)\s*segundo/i);
+  return enElMensaje ? Number(enElMensaje[1]) : undefined;
+}
+
 async function cuerpoDeError(respuesta: Response): Promise<ErrorApi> {
   let detalle = `La API respondió ${respuesta.status}.`;
   let errores: ErroresPorCampo = {};
@@ -83,7 +108,7 @@ async function cuerpoDeError(respuesta: Response): Promise<ErrorApi> {
   } catch {
     // Sin cuerpo JSON (502 de un proxy, corte de red): se queda el genérico.
   }
-  return new ErrorApi(respuesta.status, detalle, errores);
+  return new ErrorApi(respuesta.status, detalle, errores, esperaDe(respuesta, detalle));
 }
 
 let refrescoEnVuelo: Promise<boolean> | null = null;

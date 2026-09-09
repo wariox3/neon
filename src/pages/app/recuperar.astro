@@ -1,0 +1,10 @@
+---
+import Panel from '../../layouts/Panel.astro';
+import RecuperarClave from '../../components/app/RecuperarClave.tsx';
+---
+
+<Panel titulo="Recuperar la contraseña" navegacion={false}>
+  <div class="panel-contenido--estrecho">
+    <RecuperarClave client:only="react" />
+  </div>
+</Panel>

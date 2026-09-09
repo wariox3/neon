@@ -196,7 +196,12 @@ export default function Ingreso() {
         />
       </Campo>
 
-      <Campo id="password" etiqueta="Contraseña" error={errorDe(error, 'password')}>
+      <Campo
+        id="password"
+        etiqueta="Contraseña"
+        error={errorDe(error, 'password')}
+        ayuda={<a href="/app/recuperar/">¿Olvidaste la contraseña?</a>}
+      >
         <input
           id="password"
           name="password"

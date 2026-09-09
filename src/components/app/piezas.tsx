@@ -1,5 +1,5 @@
 /** Piezas que se repiten en todas las pantallas del panel. */
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 
 import { ErrorApi } from '../../lib/api';
 import type { Sesion } from '../../lib/sesion';
@@ -96,6 +96,40 @@ export function SesionNoLista({ sesion }: { sesion: Sesion }) {
   }
   // 'anonimo' dura lo justo: `useSesion` ya está redirigiendo al ingreso.
   return <Cargando />;
+}
+
+/**
+ * Cuenta atrás de un 429.
+ *
+ * Mientras quede tiempo el formulario no deja reintentar: cada intento durante
+ * la regulación no solo falla, sino que en algunos backends reinicia la espera.
+ */
+export function useEspera(error: unknown): number {
+  const [restante, setRestante] = useState(0);
+
+  useEffect(() => {
+    if (error instanceof ErrorApi && error.segundosDeEspera) {
+      setRestante(error.segundosDeEspera);
+    }
+  }, [error]);
+
+  useEffect(() => {
+    if (restante <= 0) return;
+    const id = setTimeout(() => setRestante(restante - 1), 1000);
+    return () => clearTimeout(id);
+  }, [restante]);
+
+  return restante;
+}
+
+/** El aviso que acompaña a `useEspera`. */
+export function AvisoEspera({ segundos }: { segundos: number }) {
+  return (
+    <Aviso>
+      Demasiados intentos seguidos. Puedes volver a probar en{' '}
+      <strong>{segundos} s</strong>.
+    </Aviso>
+  );
 }
 
 /** Saca de `ErrorApi` los errores del campo pedido. */

@@ -8,7 +8,8 @@
 import { type SubmitEvent, useEffect, useState } from 'react';
 
 import { api } from '../../lib/api';
-import { Aviso, Campo, ErrorGeneral, errorDe } from './piezas';
+import { AYUDA_CONTRASENA, problemaDeContrasena } from '../../lib/contrasena';
+import { Aviso, AvisoEspera, Campo, ErrorGeneral, errorDe, useEspera } from './piezas';
 
 interface Alta {
   email: string;
@@ -21,7 +22,9 @@ export default function Registro() {
   const [password, setPassword] = useState('');
   const [alta, setAlta] = useState<Alta | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const [errorPassword, setErrorPassword] = useState<string | undefined>();
   const [enviando, setEnviando] = useState(false);
+  const espera = useEspera(error);
 
   // `?reenviar=1` llega desde el ingreso, cuando falta confirmar el correo.
   const [reenviando, setReenviando] = useState(false);
@@ -32,6 +35,15 @@ export default function Registro() {
 
   async function registrar(evento: SubmitEvent<HTMLFormElement>) {
     evento.preventDefault();
+
+    if (espera > 0) return;
+
+    const problema = problemaDeContrasena(password, email);
+    if (problema) {
+      setErrorPassword(problema);
+      return;
+    }
+
     setEnviando(true);
     setError(null);
     try {
@@ -49,6 +61,7 @@ export default function Registro() {
 
   async function reenviar(evento: SubmitEvent<HTMLFormElement>) {
     evento.preventDefault();
+    if (espera > 0) return;
     setEnviando(true);
     setError(null);
     try {
@@ -91,7 +104,7 @@ export default function Registro() {
           Escribe el correo con el que te registraste y te mandamos otro enlace.
         </p>
 
-        <ErrorGeneral error={error} />
+        {espera > 0 ? <AvisoEspera segundos={espera} /> : <ErrorGeneral error={error} />}
         {reenviado && (
           <Aviso tipo="exito">
             Si esa dirección tiene una cuenta sin confirmar, el enlace va en camino.
@@ -111,8 +124,8 @@ export default function Registro() {
         </Campo>
 
         <div className="acciones">
-          <button type="submit" disabled={enviando}>
-            {enviando ? 'Enviando…' : 'Mandar el enlace'}
+          <button type="submit" disabled={enviando || espera > 0}>
+            {espera > 0 ? `Espera ${espera} s` : enviando ? 'Enviando…' : 'Mandar el enlace'}
           </button>
           <a href="/app/ingresar/">Volver</a>
         </div>
@@ -127,7 +140,7 @@ export default function Registro() {
         ¿Ya tienes una? <a href="/app/ingresar/">Entra</a>.
       </p>
 
-      <ErrorGeneral error={error} />
+      {espera > 0 ? <AvisoEspera segundos={espera} /> : <ErrorGeneral error={error} />}
 
       <Campo id="email" etiqueta="Correo" error={errorDe(error, 'email')}>
         <input
@@ -141,11 +154,24 @@ export default function Registro() {
         />
       </Campo>
 
+      {/*
+        El backend, cuando el correo ya está dado de alta, responde «Inicia sesión
+        o recupera la contraseña». Aquí se le ponen los dos destinos: el mensaje
+        los nombra pero no los enlaza. Se muestran ante cualquier error del campo
+        para no depender de que el texto exacto del backend no cambie.
+      */}
+      {errorDe(error, 'email') && (
+        <p className="panel-guia">
+          <a href="/app/ingresar/">Entrar</a> ·{' '}
+          <a href="/app/recuperar/">Recuperar la contraseña</a>
+        </p>
+      )}
+
       <Campo
         id="password"
         etiqueta="Contraseña"
-        error={errorDe(error, 'password')}
-        ayuda="Al menos ocho caracteres, y que no sea una contraseña común."
+        error={errorPassword ?? errorDe(error, 'password')}
+        ayuda={AYUDA_CONTRASENA}
       >
         <input
           id="password"
@@ -153,13 +179,16 @@ export default function Registro() {
           autoComplete="new-password"
           required
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setErrorPassword(undefined);
+          }}
         />
       </Campo>
 
       <div className="acciones">
-        <button type="submit" disabled={enviando}>
-          {enviando ? 'Creando…' : 'Crear la cuenta'}
+        <button type="submit" disabled={enviando || espera > 0}>
+          {espera > 0 ? `Espera ${espera} s` : enviando ? 'Creando…' : 'Crear la cuenta'}
         </button>
       </div>
     </form>

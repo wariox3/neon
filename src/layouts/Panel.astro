@@ -6,8 +6,9 @@
  * sí reutiliza sus variables de color (`src/styles/custom.css`) para que el
  * panel y la documentación se vean del mismo sitio.
  *
- * La navegación se pinta solo cuando la página la pide: las pantallas de
- * ingreso, registro y confirmación no tienen a dónde navegar todavía.
+ * La navegación completa se pinta solo cuando la página la pide. Las pantallas
+ * de ingreso, registro y confirmación reciben en su lugar una cabecera mínima:
+ * sin sesión no hay panel al que ir, pero sí hay que poder volver al sitio.
  */
 import '../styles/custom.css';
 import '../styles/panel.css';
@@ -42,7 +43,16 @@ const { titulo, navegacion = true } = Astro.props;
     </script>
   </head>
   <body>
-    {navegacion && <BarraPanel client:only="react" />}
+    {navegacion ? (
+      <BarraPanel client:only="react" />
+    ) : (
+      <header class="panel-barra">
+        <a class="panel-barra__marca" href="/">RedEDoc</a>
+        <nav class="panel-barra__enlaces">
+          <a href="/">Volver al sitio</a>
+        </nav>
+      </header>
+    )}
     <main class="panel-contenido">
       <slot />
     </main>
