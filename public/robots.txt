@@ -1,0 +1,10 @@
+# El panel y los aterrizajes de correo no se indexan: son cascarones que solo
+# tienen sentido con una sesión o un token en la query. Las páginas ya mandan
+# <meta name="robots" content="noindex">; esto le ahorra a Google la visita.
+User-agent: *
+Disallow: /app/
+Disallow: /verificar-correo/
+Disallow: /restablecer-clave/
+Allow: /
+
+Sitemap: https://rededoc.co/sitemap-index.xml

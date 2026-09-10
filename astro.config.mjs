@@ -2,6 +2,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
+import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 
 /**
@@ -18,11 +19,32 @@ const sidebarApi = existsSync(RUTA_SIDEBAR_API)
 // entera; el panel de `/app/` son cascarones que piden sus datos a la API desde
 // el navegador, con la sesión en cookies que el navegador manda solo. Nada de
 // esto necesita un servidor propio.
-// TODO: fijar `site` con el dominio definitivo (habilita sitemap y URLs canónicas).
+//
+// `site` es el dominio publicado. De él salen las URLs canónicas de cada página
+// y las del sitemap, que son absolutas por especificación. Se puede sobrescribir
+// con `SITE_URL` para compilar una copia en otro dominio (un preproducción, por
+// ejemplo) sin que el sitemap apunte al de producción.
+const site = process.env.SITE_URL ?? 'https://rededoc.co';
+
+// Rutas que no se indexan: el panel y los dos aterrizajes de correo. Todas
+// salen de `src/layouts/Panel.astro`, que ya manda `noindex`; esto las saca
+// además del sitemap, para no ofrecerle a Google lo que luego le negamos.
+const SIN_INDEXAR = ['/app/', '/verificar-correo/', '/restablecer-clave/'];
+
 export default defineConfig({
+  site,
   build: { format: 'directory' },
   integrations: [
     react(),
+    // Starlight trae esta misma integración y la añade sola, pero sin opciones.
+    // Declararla aquí hace que Starlight respete la nuestra (comprueba si ya
+    // está en la lista) y nos deja filtrar lo que no debe indexarse.
+    sitemap({
+      filter: (url) => {
+        const { pathname } = new URL(url);
+        return !SIN_INDEXAR.some((ruta) => pathname.startsWith(ruta));
+      },
+    }),
     starlight({
       title: 'RedEDoc',
       description:

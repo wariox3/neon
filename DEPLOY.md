@@ -330,8 +330,9 @@ y el riesgo de que un cliente de correo que reescribe enlaces se coma el token p
 
 ## Antes del primer despliegue
 
-- [ ] Fijar `site: 'https://rededoc.co'` en `astro.config.mjs`. Sin eso Astro no genera el
-      sitemap y las URLs canónicas quedan relativas (hoy es un `TODO` en el archivo).
+- [ ] Comprobar que la compilación dejó `dist/sitemap-index.xml` y `dist/robots.txt`.
+      El dominio sale de `site` en `astro.config.mjs` (`https://rededoc.co`); para
+      compilar contra otro, exporta `SITE_URL`.
 - [ ] DNS de `rededoc.co`, `www` y `api` en Cloudflare, apuntando al origen.
 - [ ] Compilar con `PUBLIC_API_BASE=https://api.rededoc.co`.
 - [ ] Certificado en el origen para `rededoc.co` **y** `www`, más otro para
@@ -356,10 +357,23 @@ y el riesgo de que un cliente de correo que reescribe enlaces se coma el token p
 - **No hay nada protegido en lo que se sirve.** Todo lo que se ve en el panel llega de la
   API con la sesión de quien mira; no hay secretos que filtrar salvo lo que se ponga en una
   variable `PUBLIC_*`, que es pública por definición.
-- **Cloudflare cachea, y eso sobrevive al `rsync`.** Los archivos de `_astro/` llevan hash
-  en el nombre, así que no dan problema, pero el HTML sí puede quedarse servido de caché
-  tras un despliegue. Si publicas y no ves el cambio, purga: Cloudflare → Caching →
-  **Purge Everything**.
+- **Cloudflare cachea, y eso sobrevive al `rsync`.** Medido el 2026-09-10, el HTML sale
+  con `cf-cache-status: DYNAMIC`: Cloudflare no lo cachea de serie, así que un despliegue
+  se ve al momento. Lo que sí se cachea son los estáticos (`_astro/`, `favicon.svg`,
+  `robots.txt`, `sitemap-*.xml`) con `max-age=14400`, cuatro horas. Los de `_astro/` llevan
+  hash en el nombre y no dan problema; `robots.txt` y los sitemaps **no**, y son justo los
+  que cambian ahora. Tras publicar, purga al menos esos: Cloudflare → Caching →
+  **Purge Everything**. Y si algún día se añade una Cache Rule para HTML, esta nota deja
+  de valer: vuelve a mirar `cf-cache-status`.
+- **El `robots.txt` de Cloudflare pisa al nuestro.** La zona tiene activado *Manage
+  robots.txt* (Content Signals): hoy `https://rededoc.co/robots.txt` devuelve un bloque
+  gestionado por Cloudflare —`search=yes`, y `Disallow` para GPTBot, ClaudeBot,
+  Google-Extended y demás— aunque el origen todavía no sirve ninguno. Googlebot **no**
+  está bloqueado y `Google-Extended` solo afecta al entrenamiento de Gemini, no a la
+  búsqueda; para indexar no estorba. Pero hay que comprobar tras el despliegue que el
+  nuestro (con la línea `Sitemap:`) aparece de verdad: Cloudflare debería añadir su bloque
+  al del origen, no sustituirlo. Si lo sustituye, o se desactiva la función en
+  Cloudflare → Bots, o el sitemap se envía solo por Search Console.
 - **`/opt/neon` no debe ser accesible por web.** nginx sirve `/var/www/neon`, no
   el repo: ahí están `.git`, `node_modules` y `.env`.
 
@@ -376,6 +390,39 @@ Ya en `https://rededoc.co`:
 1. Carga la portada y una guía con barra final (`/guias/empezar/`).
 2. Una URL inventada devuelve la página 404 del sitio, no la de nginx.
 3. Entrar a `/app/ingresar/`, iniciar sesión y ver que el listado de emisores carga.
+4. `curl -s https://rededoc.co/sitemap-index.xml` y `curl -s https://rededoc.co/robots.txt`
+   devuelven XML y texto, no la página 404.
+
+## Que Google lo encuentre
+
+El sitio ya se compila indexable: cada página lleva su URL canónica y la compilación
+genera `sitemap-index.xml` (que apunta a `sitemap-0.xml`, con las 101 páginas de
+documentación) más el `robots.txt` que lo anuncia. Fuera del sitemap y con `noindex`
+quedan `/app/`, `/verificar-correo/` y `/restablecer-clave/`: son cascarones que sin
+sesión o sin token no muestran nada.
+
+Publicar no basta para salir en Google; falta darse de alta una vez:
+
+1. En [Google Search Console](https://search.google.com/search-console) → **Añadir
+   propiedad** → **Dominio**, escribe `rededoc.co`.
+2. Google pide un registro `TXT` de verificación. Ponlo en Cloudflare → DNS (nombre `@`,
+   el valor que dé Google) y dale a **Verificar**. Con la propiedad de tipo dominio
+   quedan cubiertos `www` y `api` sin trámite aparte.
+3. Ya dentro, **Sitemaps** → envía `sitemap-index.xml`. Debe quedar en «Correcto» con las
+   101 URL leídas; si dice «No se ha podido obtener», casi siempre es que el despliegue
+   no copió el archivo o que Cloudflare sirve una copia vieja (purga la caché).
+4. **Inspección de URLs** con `https://rededoc.co/` → **Solicitar indexación**, para no
+   esperar al rastreo natural. Es un empujón para la portada, no para las 101.
+
+La indexación tarda: de unos días a un par de semanas para las primeras páginas. Se
+sigue en **Páginas** (cuántas indexadas y por qué se descartan las demás) y en
+**Rendimiento** (cuándo empieza a haber impresiones). Que una página aparezca como
+«Rastreada, no indexada» al principio es normal y no requiere tocar nada.
+
+Un aviso sobre Cloudflare: si algún día se activa **Bot Fight Mode** o un rate limit
+agresivo, el rastreador de Google se lleva retos y deja de indexar. Los buscadores
+verificados están exentos por defecto, pero conviene revisarlo si las páginas indexadas
+caen de golpe.
 
 Si el punto 3 responde 401 en bucle, el problema es de cookies o de CORS en nobelio, no del
 sitio. Si lo que ves es una redirección infinita, es el modo de cifrado de Cloudflare: pásalo
