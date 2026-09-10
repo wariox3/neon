@@ -396,10 +396,17 @@ Ya en `https://rededoc.co`:
 ## Que Google lo encuentre
 
 El sitio ya se compila indexable: cada página lleva su URL canónica y la compilación
-genera `sitemap-index.xml` (que apunta a `sitemap-0.xml`, con las 101 páginas de
-documentación) más el `robots.txt` que lo anuncia. Fuera del sitemap y con `noindex`
-quedan `/app/`, `/verificar-correo/` y `/restablecer-clave/`: son cascarones que sin
-sesión o sin token no muestran nada.
+genera `sitemap-index.xml` (que apunta a `sitemap-0.xml`, con las 10 páginas que sí
+queremos en el buscador: la portada, las cinco guías y las cuatro de «El servicio») más el
+`robots.txt` que lo anuncia.
+
+Fuera del sitemap y con `noindex` quedan dos grupos. `/app/`, `/verificar-correo/` y
+`/restablecer-clave/`, que son cascarones que sin sesión o sin token no muestran nada. Y
+las 91 páginas de `/api/`: la referencia es material de consulta para quien ya está
+integrando, no una puerta de entrada desde Google, y se llega a ella por el menú del sitio.
+Ninguno de los dos grupos se bloquea en `robots.txt` **a propósito**: si Google no puede
+rastrear la página, tampoco llega a leer el `noindex`, y una URL ya conocida seguiría
+saliendo en los resultados sin descripción.
 
 Publicar no basta para salir en Google; falta darse de alta una vez:
 
@@ -409,10 +416,10 @@ Publicar no basta para salir en Google; falta darse de alta una vez:
    el valor que dé Google) y dale a **Verificar**. Con la propiedad de tipo dominio
    quedan cubiertos `www` y `api` sin trámite aparte.
 3. Ya dentro, **Sitemaps** → envía `sitemap-index.xml`. Debe quedar en «Correcto» con las
-   101 URL leídas; si dice «No se ha podido obtener», casi siempre es que el despliegue
+   10 URL leídas; si dice «No se ha podido obtener», casi siempre es que el despliegue
    no copió el archivo o que Cloudflare sirve una copia vieja (purga la caché).
 4. **Inspección de URLs** con `https://rededoc.co/` → **Solicitar indexación**, para no
-   esperar al rastreo natural. Es un empujón para la portada, no para las 101.
+   esperar al rastreo natural. Es un empujón para la portada, no para las diez.
 
 La indexación tarda: de unos días a un par de semanas para las primeras páginas. Se
 sigue en **Páginas** (cuántas indexadas y por qué se descartan las demás) y en

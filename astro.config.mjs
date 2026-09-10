@@ -26,10 +26,15 @@ const sidebarApi = existsSync(RUTA_SIDEBAR_API)
 // ejemplo) sin que el sitemap apunte al de producción.
 const site = process.env.SITE_URL ?? 'https://rededoc.co';
 
-// Rutas que no se indexan: el panel y los dos aterrizajes de correo. Todas
-// salen de `src/layouts/Panel.astro`, que ya manda `noindex`; esto las saca
-// además del sitemap, para no ofrecerle a Google lo que luego le negamos.
-const SIN_INDEXAR = ['/app/', '/verificar-correo/', '/restablecer-clave/'];
+// Rutas que no se indexan; esto las saca del sitemap, para no ofrecerle a
+// Google lo que luego le negamos. El `noindex` de cada una va aparte:
+//
+//   /app/, /verificar-correo/, /restablecer-clave/  →  src/layouts/Panel.astro
+//   /api/                                           →  scripts/generar-referencia.mjs
+//
+// La referencia de la API queda fuera del buscador a propósito: es material de
+// consulta para quien ya está integrando. Se llega a ella por el menú del sitio.
+const SIN_INDEXAR = ['/app/', '/verificar-correo/', '/restablecer-clave/', '/api/'];
 
 export default defineConfig({
   site,

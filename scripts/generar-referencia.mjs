@@ -29,6 +29,24 @@ const SIDEBAR = resolve(RAIZ, 'src/generated/sidebar-api.json');
 
 const METODOS = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options'];
 
+/**
+ * La referencia no se indexa: es material de consulta para quien ya está
+ * integrando, no una puerta de entrada desde el buscador. Va en el frontmatter
+ * de cada página generada, y `astro.config.mjs` las deja además fuera del
+ * sitemap.
+ *
+ * `follow` a propósito: Google no las lista, pero sigue los enlaces que salen
+ * de ellas hacia las guías, que esas sí interesan. Y no se bloquean en
+ * `robots.txt`: si no puede rastrearlas, no llega a leer este `noindex`.
+ */
+const SIN_INDEXAR = [
+  'head:',
+  '  - tag: meta',
+  '    attrs:',
+  '      name: robots',
+  '      content: noindex, follow',
+];
+
 // ---------------------------------------------------------------- utilidades
 
 const log = (...args) => console.log('[referencia]', ...args);
@@ -410,14 +428,190 @@ function bloqueDeSeguridad(esquema, op) {
   return lineas.join('\n');
 }
 
-function paginaDeOperacion(esquema, operacion, orden, provisional) {
+// ------------------------------------------- descripciones para el buscador
+
+/**
+ * Cómo se lee cada recurso dentro de una frase. La clave es el segmento de la
+ * ruta (`/api/catalogos/forma-pago/` → `forma-pago`).
+ *
+ * Hace falta porque el `description` de una operación es, en el esquema, el
+ * docstring del *viewset*: el mismo texto para todos sus métodos. Las acciones
+ * personalizadas (`emitir`, `enviar`, `pdf`…) sí traen el suyo y se respeta;
+ * lo que se genera aquí es solo la descripción del CRUD, que sin esto salía
+ * repetida en decenas de páginas —y Google descarta las descripciones
+ * repetidas—.
+ */
+const RECURSOS = {
+  // Catálogos. Todos de solo lectura: solo `list` y `retrieve`.
+  departamento: { plural: 'los departamentos de Colombia', singular: 'un departamento' },
+  'forma-pago': { plural: 'las formas de pago', singular: 'una forma de pago' },
+  'medio-pago': { plural: 'los medios de pago', singular: 'un medio de pago' },
+  moneda: { plural: 'las monedas', singular: 'una moneda' },
+  municipio: { plural: 'los municipios de Colombia', singular: 'un municipio' },
+  pais: { plural: 'los países', singular: 'un país' },
+  'periodo-nomina': { plural: 'los periodos de nómina', singular: 'un periodo de nómina' },
+  'responsabilidad-fiscal': {
+    plural: 'las responsabilidades fiscales',
+    singular: 'una responsabilidad fiscal',
+  },
+  'subtipo-trabajador': {
+    plural: 'los subtipos de trabajador',
+    singular: 'un subtipo de trabajador',
+  },
+  'tipo-contrato': { plural: 'los tipos de contrato', singular: 'un tipo de contrato' },
+  'tipo-factura': { plural: 'los tipos de factura', singular: 'un tipo de factura' },
+  'tipo-identificacion': {
+    plural: 'los tipos de identificación',
+    singular: 'un tipo de identificación',
+  },
+  'tipo-organizacion': {
+    plural: 'los tipos de organización',
+    singular: 'un tipo de organización',
+  },
+  'tipo-trabajador': { plural: 'los tipos de trabajador', singular: 'un tipo de trabajador' },
+  tributo: { plural: 'los tributos', singular: 'un tributo' },
+  'unidad-medida': { plural: 'las unidades de medida', singular: 'una unidad de medida' },
+
+  // Recursos con escritura.
+  documento: {
+    plural: 'los documentos electrónicos del emisor',
+    singular: 'un documento electrónico',
+    lista: 'Lista los documentos electrónicos del emisor: facturas de venta, notas crédito y débito y documento soporte.',
+    borrar: 'Elimina un documento electrónico. Un documento no se edita: si estaba mal, se borra y se crea de nuevo.',
+  },
+  certificado: {
+    plural: 'los certificados de firma digital',
+    singular: 'un certificado de firma digital',
+  },
+  emisor: {
+    plural: 'los emisores que alcanza la credencial',
+    singular: 'un emisor',
+    lista: 'Lista los emisores que alcanza la credencial: las empresas desde las que se factura.',
+  },
+  resolucion: {
+    plural: 'las resoluciones de facturación',
+    singular: 'una resolución de facturación',
+  },
+  software: {
+    plural: 'los registros de software ante la DIAN',
+    singular: 'un registro de software',
+  },
+  empleado: {
+    plural: 'los empleados',
+    singular: 'un empleado',
+    lista: 'Lista los empleados. Se crean una vez y cada nómina los referencia.',
+  },
+  nomina: { plural: 'las nóminas electrónicas', singular: 'una nómina electrónica' },
+};
+
+/** Coletilla por etiqueta, para dar contexto a las frases más escuetas. */
+const COLAS = {
+  catalogos: 'Catálogo de solo lectura con los valores que la DIAN acepta.',
+};
+
+/**
+ * Deja un texto apto para `<meta name="description">`: sin marcado de Markdown
+ * ni de reStructuredText, en una sola línea y recortado a 160 caracteres, que
+ * es más o menos lo que Google llega a mostrar.
+ */
+function limpiarParaMeta(texto) {
+  const plano = String(texto)
+    .replace(/``([^`]+)``/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (plano.length <= 160) return plano;
+  const corte = plano.slice(0, 160);
+  return `${corte.slice(0, corte.lastIndexOf(' '))}…`;
+}
+
+/** Partes de una ruta: `/api/catalogos/pais/{id}/` → etiqueta, recurso, si es detalle. */
+function piezasDeRuta(ruta) {
+  const segmentos = ruta.split('/').filter(Boolean).slice(1); // fuera el `api` inicial
+  const etiqueta = segmentos[0];
+  const ultimo = segmentos[segmentos.length - 1] ?? '';
+  const detalle = ultimo.startsWith('{');
+  const recurso = detalle ? segmentos[segmentos.length - 2] : ultimo;
+  return { etiqueta, recurso, detalle };
+}
+
+/** Frase para una operación de CRUD, a partir del método y la forma de la ruta. */
+function descripcionDeCrud(ruta, metodo) {
+  const { etiqueta, recurso, detalle } = piezasDeRuta(ruta);
+  const r = RECURSOS[recurso];
+  if (!r) return null;
+
+  const cola = COLAS[etiqueta] ? ` ${COLAS[etiqueta]}` : '';
+  const clave = etiqueta === 'catalogos' ? 'su código' : 'su identificador';
+
+  if (!detalle) {
+    if (metodo === 'get') return `${r.lista ?? `Lista ${r.plural}.`}${cola}`;
+    if (metodo === 'post') return `${r.crear ?? `Crea ${r.singular}.`}${cola}`;
+    return null;
+  }
+  if (metodo === 'get') return `Consulta ${r.singular} por ${clave}.${cola}`;
+  if (metodo === 'put') return `Reemplaza todos los campos de ${r.singular}.${cola}`;
+  if (metodo === 'patch') return `Actualiza ${r.singular} campo a campo, sin tocar el resto.${cola}`;
+  if (metodo === 'delete') return `${r.borrar ?? `Elimina ${r.singular}.`}${cola}`;
+  return null;
+}
+
+/**
+ * Descripción de una página de operación, por orden de preferencia:
+ *
+ *  1. `summary` de la operación, si el backend lo pone: es texto pensado a mano.
+ *  2. El `description` propio, cuando de verdad es suyo. Se considera propio si
+ *     no lo comparte con operaciones de OTRAS rutas: `GET` y `POST` sobre
+ *     `/nomina/{id}/consultar/` comparten docstring y está bien, pero el de un
+ *     viewset aparece en `/documento/` y en `/documento/{id}/` a la vez.
+ *  3. Una frase construida con el método y la ruta.
+ *
+ * Con este orden, el día que el backend documente cada método la descripción
+ * generada deja de usarse sola, sin tocar este archivo.
+ */
+function descripcionDeOperacion({ ruta, metodo, op }, compartidas) {
+  if (op.summary) return limpiarParaMeta(op.summary);
+
+  const primera = String(op.description ?? '').split(/\r?\n/)[0].trim();
+  if (primera && !compartidas.has(primera)) return limpiarParaMeta(primera);
+
+  const generada = descripcionDeCrud(ruta, metodo);
+  if (generada) return limpiarParaMeta(generada);
+
+  return primera ? limpiarParaMeta(primera) : null;
+}
+
+/**
+ * Primeras líneas de `description` que aparecen en más de una ruta: son
+ * docstrings de viewset, no de la operación.
+ */
+function descripcionesCompartidas(operaciones) {
+  const rutasPorTexto = new Map();
+  for (const { ruta, op } of operaciones) {
+    const primera = String(op.description ?? '').split(/\r?\n/)[0].trim();
+    if (!primera) continue;
+    if (!rutasPorTexto.has(primera)) rutasPorTexto.set(primera, new Set());
+    rutasPorTexto.get(primera).add(ruta);
+  }
+  const compartidas = new Set();
+  for (const [texto, rutas] of rutasPorTexto) {
+    if (rutas.size > 1) compartidas.add(texto);
+  }
+  return compartidas;
+}
+
+function paginaDeOperacion(esquema, operacion, orden, provisional, compartidas) {
   const { ruta, metodo, op, parametros } = operacion;
   const titulo = op.summary || `${metodo.toUpperCase()} ${ruta}`;
+  const descripcion = descripcionDeOperacion(operacion, compartidas);
 
   const frontmatter = [
     '---',
     `title: ${yamlEscapado(titulo)}`,
-    op.description ? `description: ${yamlEscapado(resumen(op.description))}` : null,
+    descripcion ? `description: ${yamlEscapado(descripcion)}` : null,
+    ...SIN_INDEXAR,
     'sidebar:',
     `  order: ${orden}`,
     op.deprecated ? '  badge:\n    text: obsoleto\n    variant: caution' : null,
@@ -443,14 +637,6 @@ function paginaDeOperacion(esquema, operacion, orden, provisional) {
   return bloques.map((b) => b.trim()).filter(Boolean).join('\n\n');
 }
 
-/** Primera frase de una descripción, recortada para el frontmatter. */
-function resumen(texto) {
-  const primera = String(texto).split(/\r?\n/)[0].trim();
-  if (primera.length <= 160) return primera;
-  const corte = primera.slice(0, 160);
-  return `${corte.slice(0, corte.lastIndexOf(' '))}…`;
-}
-
 function avisoProvisional(provisional) {
   if (!provisional) return '';
   return [
@@ -468,6 +654,7 @@ function paginaIndice(esquema, porEtiqueta, provisional, origen) {
     '---',
     'title: "Referencia de la API"',
     'description: "Endpoints de RedEDoc generados a partir de su esquema OpenAPI."',
+    ...SIN_INDEXAR,
     'sidebar:',
     '  order: 0',
     '  label: "Vista general"',
@@ -537,6 +724,7 @@ async function principal() {
   if (provisional) log('aviso: el esquema está marcado como PROVISIONAL.');
 
   const operaciones = recogerOperaciones(esquema);
+  const compartidas = descripcionesCompartidas(operaciones);
   if (!operaciones.length) throw new Error('El esquema no declara ninguna operación.');
 
   // Orden de las etiquetas: el del esquema primero, el resto alfabético.
@@ -574,7 +762,10 @@ async function principal() {
     for (const [indice, item] of grupo.entries()) {
       const destino = resolve(SALIDA, item.dirSlug, `${item.slug}.md`);
       await mkdir(dirname(destino), { recursive: true });
-      await writeFile(destino, `${paginaDeOperacion(esquema, item, indice + 1, provisional)}\n`);
+      await writeFile(
+        destino,
+        `${paginaDeOperacion(esquema, item, indice + 1, provisional, compartidas)}\n`
+      );
       escritas += 1;
     }
   }
