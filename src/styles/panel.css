@@ -235,6 +235,11 @@ button.peligro {
   margin-top: 1.5rem;
 }
 
+/* En una cabecera van a la altura del título, no separadas del bloque anterior. */
+.panel-cabecera .acciones {
+  margin-top: 0;
+}
+
 /* --- Avisos -------------------------------------------------------------- */
 
 .aviso {
@@ -444,6 +449,123 @@ tbody tr:last-child td {
 .campo-clave__ver:hover:not(:disabled) {
   color: var(--sl-color-white);
   filter: none;
+}
+
+/* --- Pestañas ------------------------------------------------------------ */
+
+.pestanas {
+  display: flex;
+  gap: 0.25rem;
+  margin: 1.5rem 0;
+  border-bottom: 1px solid var(--panel-borde);
+  overflow-x: auto;
+}
+
+/* Anula el botón de acción: aquí son solapas, no botones. */
+.pestanas button {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 0.6rem 0.9rem;
+  color: var(--sl-color-gray-2);
+  white-space: nowrap;
+}
+
+.pestanas button:hover:not(:disabled) {
+  color: var(--sl-color-white);
+  filter: none;
+}
+
+.pestanas button[aria-selected='true'] {
+  color: var(--sl-color-accent-high);
+  border-bottom-color: currentcolor;
+}
+
+/* El panel recibe el foco al llegar con el tabulador; el borde lo pone el
+   navegador, pero sin esto no habría a qué agarrarlo. */
+[role='tabpanel']:focus-visible {
+  outline: 2px solid var(--sl-color-accent-high);
+  outline-offset: 0.5rem;
+}
+
+/* --- Fichas de solo lectura ---------------------------------------------- */
+
+/* Pares etiqueta/valor. Misma rejilla que los formularios, para que una ficha y
+   su formulario se lean como la misma pantalla. */
+.datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+  margin: 0 0 1rem;
+}
+
+.datos > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.datos > div.ancho {
+  grid-column: 1 / -1;
+}
+
+.datos dt {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.datos dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Un identificador largo —un UUID de la DIAN— cabe entero en una fila suya;
+   troceado en dos líneas deja de leerse como un solo valor. */
+.datos > div.ancho .monospacio {
+  white-space: nowrap;
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Una ficha dentro de otra: cada software con sus campos. */
+.ficha {
+  border: 1px solid var(--panel-borde);
+  border-radius: var(--panel-radio);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.ficha h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.ficha .datos {
+  margin-bottom: 0;
+}
+
+/* Una credencial tapada, con su interruptor al lado. */
+.secreto {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+/* Varias etiquetas seguidas: responsabilidades fiscales y demás. */
+.fichas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+/* Los enlaces de la última columna de una tabla. */
+.acciones-fila {
+  display: flex;
+  gap: 0.75rem;
+  white-space: nowrap;
 }
 
 /* Atribución de la empresa, al pie de todas las pantallas del panel. */

@@ -63,6 +63,93 @@ export function Marca({ valor, si = 'Sí', no = 'No' }: {
   );
 }
 
+interface Pestana {
+  id: string;
+  titulo: string;
+  /** Función, no nodo: lo que la pestaña pinta —y lo que pide a la API— espera
+   *  a que alguien la abra. */
+  render: () => ReactNode;
+}
+
+/**
+ * Pestañas, con el teclado que espera un lector de pantalla: flechas para
+ * moverse entre ellas, `aria-selected` para decir cuál manda y un solo botón en
+ * el orden de tabulación.
+ */
+export function Pestanas({ nombre, etiqueta, pestanas }: {
+  nombre: string;
+  etiqueta: string;
+  pestanas: Pestana[];
+}) {
+  const [activa, setActiva] = useState(pestanas[0]?.id ?? '');
+  const indice = Math.max(0, pestanas.findIndex((pestana) => pestana.id === activa));
+  const abierta = pestanas[indice];
+
+  function mover(paso: number) {
+    const siguiente = pestanas[(indice + paso + pestanas.length) % pestanas.length];
+    setActiva(siguiente.id);
+    document.getElementById(`${nombre}-${siguiente.id}`)?.focus();
+  }
+
+  if (!abierta) return null;
+
+  return (
+    <>
+      <div className="pestanas" role="tablist" aria-label={etiqueta}>
+        {pestanas.map((pestana) => (
+          <button
+            key={pestana.id}
+            id={`${nombre}-${pestana.id}`}
+            type="button"
+            role="tab"
+            aria-selected={pestana.id === abierta.id}
+            aria-controls={`${nombre}-panel`}
+            tabIndex={pestana.id === abierta.id ? 0 : -1}
+            onClick={() => setActiva(pestana.id)}
+            onKeyDown={(evento) => {
+              if (evento.key === 'ArrowRight') mover(1);
+              else if (evento.key === 'ArrowLeft') mover(-1);
+              else return;
+              evento.preventDefault();
+            }}
+          >
+            {pestana.titulo}
+          </button>
+        ))}
+      </div>
+      <div
+        id={`${nombre}-panel`}
+        role="tabpanel"
+        aria-labelledby={`${nombre}-${abierta.id}`}
+        tabIndex={0}
+      >
+        {abierta.render()}
+      </div>
+    </>
+  );
+}
+
+/**
+ * Un valor que es una credencial: se enseña solo si se pide.
+ *
+ * No es un secreto para quien mira —la API se lo acaba de dar—, pero sí para
+ * quien pase por detrás o mire la pantalla compartida.
+ */
+export function Secreto({ valor }: { valor: string }) {
+  const [visible, setVisible] = useState(false);
+  if (!valor) return <>—</>;
+  return (
+    <span className="secreto">
+      <span className="monospacio">
+        {visible ? valor : '•'.repeat(Math.min(valor.length, 12))}
+      </span>
+      <button type="button" className="enlace" onClick={() => setVisible(!visible)}>
+        {visible ? 'Ocultar' : 'Ver'}
+      </button>
+    </span>
+  );
+}
+
 export function Cargando({ que = 'Cargando…' }: { que?: string }) {
   return <p className="vacio">{que}</p>;
 }

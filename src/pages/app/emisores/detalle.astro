@@ -1,0 +1,12 @@
+---
+/**
+ * Ficha de un emisor, de solo lectura. Cuál, lo dice `?id=` en la URL: la salida
+ * es estática, así que no hay ruta dinámica que prerenderizar por emisor.
+ */
+import Panel from '../../../layouts/Panel.astro';
+import EmisorDetalle from '../../../components/app/EmisorDetalle.tsx';
+---
+
+<Panel titulo="Emisor">
+  <EmisorDetalle client:only="react" />
+</Panel>

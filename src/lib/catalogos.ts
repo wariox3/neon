@@ -88,6 +88,7 @@ export const TIPO_IDENTIFICACION = 'tipo-identificacion';
 export const TIPO_ORGANIZACION = 'tipo-organizacion';
 export const RESPONSABILIDAD_FISCAL = 'responsabilidad-fiscal';
 export const DEPARTAMENTO = 'departamento';
+export const TIPO_FACTURA = 'tipo-factura';
 
 // Catálogos grandes: se buscan.
 export const PAIS = 'pais';

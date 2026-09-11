@@ -43,7 +43,6 @@ const IDENTIFICACIONES_EMISOR = ['31', '13'];
 interface Emisor {
   id: number;
   razon_social: string;
-  nombre_comercial: string;
   tipo_identificacion: number | null;
   numero_identificacion: string;
   digito_verificacion: string;
@@ -68,7 +67,6 @@ interface Emisor {
 
 const VACIO = {
   razon_social: '',
-  nombre_comercial: '',
   tipo_identificacion: '',
   numero_identificacion: '',
   tipo_organizacion: '',
@@ -131,7 +129,6 @@ export default function EmisorFormulario() {
         setGuardado(emisor);
         setDatos({
           razon_social: emisor.razon_social ?? '',
-          nombre_comercial: emisor.nombre_comercial ?? '',
           tipo_identificacion: String(emisor.tipo_identificacion ?? ''),
           numero_identificacion: emisor.numero_identificacion ?? '',
           tipo_organizacion: String(emisor.tipo_organizacion ?? ''),
@@ -161,7 +158,6 @@ export default function EmisorFormulario() {
 
     const cuerpo = {
       razon_social: datos.razon_social,
-      nombre_comercial: datos.nombre_comercial,
       tipo_identificacion: Number(datos.tipo_identificacion),
       numero_identificacion: datos.numero_identificacion,
       tipo_organizacion: Number(datos.tipo_organizacion),
@@ -262,19 +258,6 @@ export default function EmisorFormulario() {
             required
             value={datos.razon_social}
             onChange={(e) => poner('razon_social', e.target.value)}
-          />
-        </Campo>
-
-        <Campo
-          id="nombre_comercial"
-          etiqueta="Nombre comercial"
-          error={errorDe(error, 'nombre_comercial')}
-          ayuda="Opcional."
-        >
-          <input
-            id="nombre_comercial"
-            value={datos.nombre_comercial}
-            onChange={(e) => poner('nombre_comercial', e.target.value)}
           />
         </Campo>
 
@@ -393,10 +376,10 @@ export default function EmisorFormulario() {
           id="codigo_postal"
           etiqueta="Código postal"
           error={errorDe(error, 'codigo_postal')}
-          ayuda="Opcional."
         >
           <input
             id="codigo_postal"
+            required
             value={datos.codigo_postal}
             onChange={(e) => poner('codigo_postal', e.target.value)}
           />

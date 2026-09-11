@@ -14,12 +14,12 @@ import { Aviso, Cargando, ErrorGeneral, SesionNoLista, Marca } from './piezas';
 interface EmisorEnLista {
   id: number;
   razon_social: string;
-  nombre_comercial: string | null;
   numero_identificacion: string;
   digito_verificacion: string | null;
-  municipio_nombre: string | null;
   activo: boolean;
   habilitado_facturacion: boolean;
+  habilitado_nomina: boolean;
+  habilitado_documento_equivalente: boolean;
 }
 
 export default function Emisores() {
@@ -92,7 +92,7 @@ export default function Emisores() {
         }}
       >
         <input
-          aria-label="Buscar por razón social, NIT o nombre comercial"
+          aria-label="Buscar por razón social o NIT"
           placeholder="Buscar por razón social o NIT…"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
@@ -130,37 +130,29 @@ export default function Emisores() {
             <table>
               <thead>
                 <tr>
-                  <th>Razón social</th>
                   <th>Identificación</th>
-                  <th>Municipio</th>
-                  <th>Activo</th>
+                  <th>Razón social</th>
                   <th>Facturación</th>
+                  <th>Nómina</th>
+                  <th>Equivalente</th>
+                  <th>Activo</th>
                   <th aria-label="Acciones" />
                 </tr>
               </thead>
               <tbody>
                 {pagina.results.map((emisor) => (
                   <tr key={emisor.id}>
-                    <td>
-                      {emisor.razon_social}
-                      {emisor.nombre_comercial && (
-                        <div className="campo__ayuda">{emisor.nombre_comercial}</div>
-                      )}
-                    </td>
                     <td className="monospacio">
                       {emisor.numero_identificacion}
                       {emisor.digito_verificacion ? `-${emisor.digito_verificacion}` : ''}
                     </td>
-                    <td>{emisor.municipio_nombre ?? '—'}</td>
+                    <td>{emisor.razon_social}</td>
+                    <td><Marca valor={emisor.habilitado_facturacion} /></td>
+                    <td><Marca valor={emisor.habilitado_nomina} /></td>
+                    <td><Marca valor={emisor.habilitado_documento_equivalente} /></td>
                     <td><Marca valor={emisor.activo} /></td>
-                    <td>
-                      <Marca
-                        valor={emisor.habilitado_facturacion}
-                        si="Habilitada"
-                        no="Pendiente"
-                      />
-                    </td>
-                    <td>
+                    <td className="acciones-fila">
+                      <a href={`/app/emisores/detalle/?id=${emisor.id}`}>Ver</a>
                       <a href={`/app/emisores/formulario/?id=${emisor.id}`}>Editar</a>
                     </td>
                   </tr>
