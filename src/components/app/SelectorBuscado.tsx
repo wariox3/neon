@@ -6,17 +6,19 @@
  * peticiones. Se busca contra `?search=`, que es justo para lo que está.
  *
  * El valor que sale es el **código** (DANE o ISO 3166), no el id: el id es un
- * serial de cada base y cambia entre ambientes.
+ * serial de cada base y cambia entre ambientes. Junto al código va el elemento
+ * entero, para quien necesite algo más de lo elegido —el formulario de emisor
+ * saca de ahí el código postal del municipio—.
  */
 import { useEffect, useRef, useState } from 'react';
 
 import { type Item, buscar, porCodigo } from '../../lib/catalogos';
 
-interface Props {
+interface Props<T extends Item> {
   id: string;
   catalogo: string;
   valor: string;
-  onCambio: (codigo: string) => void;
+  onCambio: (codigo: string, item?: T) => void;
   placeholder?: string;
   /** Se vuelve a resolver la etiqueta cuando cambia (p. ej. otro departamento). */
   reiniciarCon?: string;
@@ -24,16 +26,16 @@ interface Props {
 
 const ESPERA_MS = 250;
 
-export default function SelectorBuscado({
+export default function SelectorBuscado<T extends Item = Item>({
   id,
   catalogo,
   valor,
   onCambio,
   placeholder,
   reiniciarCon,
-}: Props) {
+}: Props<T>) {
   const [texto, setTexto] = useState('');
-  const [opciones, setOpciones] = useState<Item[]>([]);
+  const [opciones, setOpciones] = useState<T[]>([]);
   const [abierto, setAbierto] = useState(false);
   const [buscando, setBuscando] = useState(false);
   const contenedor = useRef<HTMLDivElement>(null);
@@ -51,7 +53,7 @@ export default function SelectorBuscado({
     // petición por cada selección.
     if (texto.endsWith(`(${valor})`)) return;
 
-    void porCodigo(catalogo, valor).then((item) => {
+    void porCodigo<T>(catalogo, valor).then((item) => {
       if (vigente && item) setTexto(`${item.nombre} (${item.codigo})`);
     });
     return () => {
@@ -88,7 +90,7 @@ export default function SelectorBuscado({
     }
     setBuscando(true);
     const temporizador = setTimeout(() => {
-      buscar(catalogo, texto)
+      buscar<T>(catalogo, texto)
         .then(setOpciones)
         .catch(() => setOpciones([]))
         .finally(() => setBuscando(false));
@@ -117,7 +119,7 @@ export default function SelectorBuscado({
               <button
                 type="button"
                 onClick={() => {
-                  onCambio(opcion.codigo);
+                  onCambio(opcion.codigo, opcion);
                   setTexto(`${opcion.nombre} (${opcion.codigo})`);
                   setAbierto(false);
                 }}

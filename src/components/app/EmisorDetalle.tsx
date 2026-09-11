@@ -15,7 +15,7 @@
  * código ya no está en el catálogo— se enseña el código en crudo: un dato feo se
  * lee, uno ausente no.
  */
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, type SubmitEvent, useEffect, useRef, useState } from 'react';
 
 import { ErrorApi, type Pagina, api } from '../../lib/api';
 import {
@@ -31,7 +31,17 @@ import {
   porCodigo,
 } from '../../lib/catalogos';
 import { useSesion } from '../../lib/sesion';
-import { Cargando, ErrorGeneral, Marca, Pestanas, Secreto, SesionNoLista } from './piezas';
+import {
+  Aviso,
+  Campo,
+  Cargando,
+  ErrorGeneral,
+  Marca,
+  Pestanas,
+  Secreto,
+  SesionNoLista,
+  errorDe,
+} from './piezas';
 
 const AMBIENTES: Record<number, string> = { 1: 'Producción', 2: 'Habilitación' };
 
@@ -104,6 +114,7 @@ async function delEmisor<T extends { emisor: number }>(
 function useDelEmisor<T extends { emisor: number }>(ruta: string, emisor: number) {
   const [items, setItems] = useState<T[] | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const [vuelta, setVuelta] = useState(0);
 
   useEffect(() => {
     let vigente = true;
@@ -117,9 +128,9 @@ function useDelEmisor<T extends { emisor: number }>(ruta: string, emisor: number
     return () => {
       vigente = false;
     };
-  }, [ruta, emisor]);
+  }, [ruta, emisor, vuelta]);
 
-  return { items, error };
+  return { items, error, recargar: () => setVuelta((n) => n + 1) };
 }
 
 interface Emisor {
@@ -171,10 +182,115 @@ const nombrePorId = (items: Item[], id: number | null) =>
 const nombrePorCodigo = (items: Item[], codigo: string) =>
   codigo ? items.find((item) => item.codigo === codigo)?.nombre ?? codigo : '';
 
+/**
+ * Carga de un `.p12`.
+ *
+ * Va en multipart porque lleva el archivo, y con la clave del propio `.p12`: sin
+ * ella el servidor no puede abrirlo ni validarlo. La clave no se guarda aquí ni
+ * viaja a ningún otro sitio; se manda una vez y se borra del formulario en
+ * cuanto la petición termina.
+ */
+function CargarCertificado({ emisor, alCargar }: {
+  emisor: number;
+  alCargar: () => void;
+}) {
+  const archivo = useRef<HTMLInputElement>(null);
+  const [clave, setClave] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [cargado, setCargado] = useState(false);
+
+  async function cargar(evento: SubmitEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    const elegido = archivo.current?.files?.[0];
+    if (!elegido) return;
+
+    setEnviando(true);
+    setError(null);
+    setCargado(false);
+
+    const cuerpo = new FormData();
+    cuerpo.append('emisor', String(emisor));
+    cuerpo.append('archivo', elegido);
+    cuerpo.append('clave', clave);
+
+    try {
+      await api('/api/emisores/certificado/cargar/', { metodo: 'POST', cuerpo });
+      if (archivo.current) archivo.current.value = '';
+      setClave('');
+      setCargado(true);
+      alCargar();
+    } catch (fallo) {
+      setError(fallo);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <form onSubmit={cargar}>
+      <p className="panel-guia">
+        El servidor valida el <code>.p12</code> antes de guardarlo: la clave, la vigencia y
+        que el NIT sea el de este emisor. Cada emisor mantiene un solo certificado vigente,
+        así que al cargar uno nuevo los anteriores quedan como histórico.
+      </p>
+
+      {cargado && <Aviso tipo="exito">Certificado cargado.</Aviso>}
+      <ErrorGeneral error={error} />
+
+      <div className="rejilla">
+        <Campo
+          id="archivo"
+          etiqueta="Archivo del certificado"
+          error={errorDe(error, 'archivo')}
+          ayuda="Un .p12 o .pfx."
+        >
+          <input id="archivo" ref={archivo} type="file" required accept=".p12,.pfx" />
+        </Campo>
+
+        <Campo
+          id="clave"
+          etiqueta="Clave del certificado"
+          error={errorDe(error, 'clave')}
+          ayuda="La del archivo, no la de tu cuenta."
+        >
+          <input
+            id="clave"
+            type="password"
+            required
+            autoComplete="off"
+            value={clave}
+            onChange={(e) => setClave(e.target.value)}
+          />
+        </Campo>
+      </div>
+
+      <div className="acciones">
+        <button type="submit" disabled={enviando}>
+          {enviando ? 'Cargando…' : 'Cargar certificado'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 /** Pestaña «Certificado»: los certificados de firma cargados para el emisor. */
 function PestanaCertificado({ emisor }: { emisor: number }) {
-  const { items, error } = useDelEmisor<Certificado>('/api/emisores/certificado/', emisor);
+  const { items, error, recargar } = useDelEmisor<Certificado>(
+    '/api/emisores/certificado/',
+    emisor,
+  );
 
+  return (
+    <>
+      <CargarCertificado emisor={emisor} alCargar={recargar} />
+      <h3>Certificados del emisor</h3>
+      <ListaCertificados items={items} error={error} />
+    </>
+  );
+}
+
+function ListaCertificados({ items, error }: { items: Certificado[] | null; error: unknown }) {
   if (error) return <ErrorGeneral error={error} />;
   if (items === null) return <Cargando />;
   if (items.length === 0) {

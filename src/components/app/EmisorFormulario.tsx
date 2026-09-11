@@ -13,6 +13,10 @@
  * La ubicación y las responsabilidades fiscales viajan por **código** (ISO 3166,
  * DANE y el del RUT), no por id: los ids son seriales de cada base y cambian
  * entre ambientes.
+ *
+ * El código postal es obligatorio, y al elegir municipio se sugiere el de su
+ * cabecera, que es lo que trae el catálogo. Sugerir no es imponer: lo escrito a
+ * mano no se pisa nunca.
  */
 import { type SubmitEvent, useEffect, useState } from 'react';
 
@@ -21,6 +25,7 @@ import {
   DEPARTAMENTO,
   type Item,
   MUNICIPIO,
+  type Municipio,
   PAIS,
   RESPONSABILIDAD_FISCAL,
   TIPO_IDENTIFICACION,
@@ -91,6 +96,9 @@ export default function EmisorFormulario() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [enviando, setEnviando] = useState(false);
+  // Lo último que sugirió el municipio. Sirve para saber si el código postal que
+  // hay puesto lo escribió una persona —y entonces no se toca— o lo pusimos aquí.
+  const [postalSugerido, setPostalSugerido] = useState('');
 
   const [tiposIdentificacion, setTiposIdentificacion] = useState<Item[]>([]);
   const [tiposOrganizacion, setTiposOrganizacion] = useState<Item[]>([]);
@@ -345,6 +353,12 @@ export default function EmisorFormulario() {
               // El municipio guardado ya no tiene por qué pertenecer al nuevo
               // departamento: se limpia para que se elija de nuevo.
               poner('municipio', '');
+              // Y con él se va su sugerencia de código postal, que era la de una
+              // cabecera de otro departamento. Lo escrito a mano se queda.
+              if (datos.codigo_postal && datos.codigo_postal === postalSugerido) {
+                poner('codigo_postal', '');
+                setPostalSugerido('');
+              }
             }}
           >
             <option value="">Elige…</option>
@@ -362,11 +376,20 @@ export default function EmisorFormulario() {
           error={errorDe(error, 'municipio')}
           ayuda="Escribe su nombre o su código DANE."
         >
-          <SelectorBuscado
+          <SelectorBuscado<Municipio>
             id="municipio"
             catalogo={MUNICIPIO}
             valor={datos.municipio}
-            onCambio={(codigo) => poner('municipio', codigo)}
+            onCambio={(codigo, municipio) => {
+              poner('municipio', codigo);
+              const postal = municipio?.codigo_postal ?? '';
+              // Es una sugerencia, no una imposición: solo entra si el campo está
+              // vacío o si lo que hay es la sugerencia del municipio anterior.
+              if (postal && (!datos.codigo_postal || datos.codigo_postal === postalSugerido)) {
+                poner('codigo_postal', postal);
+                setPostalSugerido(postal);
+              }
+            }}
             reiniciarCon={datos.departamento}
             placeholder="Medellín…"
           />
@@ -376,6 +399,7 @@ export default function EmisorFormulario() {
           id="codigo_postal"
           etiqueta="Código postal"
           error={errorDe(error, 'codigo_postal')}
+          ayuda="Se sugiere el de la cabecera del municipio. Cámbialo si el tuyo es otro."
         >
           <input
             id="codigo_postal"

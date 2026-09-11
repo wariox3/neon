@@ -22,6 +22,8 @@ export interface Item {
 export interface Municipio extends Item {
   departamento: number;
   departamento_codigo: string;
+  /** El de la cabecera. Es lo que el formulario de emisor sugiere. */
+  codigo_postal?: string;
 }
 
 /** Tope de páginas de `catalogo()`. Ver el comentario de arriba. */

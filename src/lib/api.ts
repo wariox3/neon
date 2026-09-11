@@ -65,6 +65,7 @@ export const POR_PAGINA = 10;
 
 interface Opciones {
   metodo?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  /** Objeto (va como JSON) o `FormData` (va como multipart, para los archivos). */
   cuerpo?: unknown;
   /** Interno: evita que el reintento tras refrescar se reintente a su vez. */
   reintentar?: boolean;
@@ -131,11 +132,17 @@ function refrescar(): Promise<boolean> {
 export async function api<T = unknown>(ruta: string, opciones: Opciones = {}): Promise<T> {
   const { metodo = 'GET', cuerpo, reintentar = true } = opciones;
 
+  // Un `FormData` viaja tal cual: el `Content-Type` lo pone el navegador, que es
+  // el único que sabe qué frontera (`boundary`) va a usar. Ponerlo a mano deja
+  // el cuerpo ilegible para el servidor.
+  const multipart = cuerpo instanceof FormData;
+
   const respuesta = await fetch(url(ruta), {
     method: metodo,
     credentials: 'include',
-    headers: cuerpo === undefined ? undefined : { 'Content-Type': 'application/json' },
-    body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
+    headers:
+      cuerpo === undefined || multipart ? undefined : { 'Content-Type': 'application/json' },
+    body: cuerpo === undefined ? undefined : multipart ? cuerpo : JSON.stringify(cuerpo),
   });
 
   if (respuesta.status === 401 && reintentar) {

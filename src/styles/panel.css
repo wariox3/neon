@@ -111,6 +111,11 @@ h2 {
   margin: 2rem 0 0.75rem;
 }
 
+h3 {
+  font-size: 1rem;
+  margin: 2rem 0 0.75rem;
+}
+
 .panel-guia {
   color: var(--sl-color-gray-3);
   margin: 0 0 1.5rem;
@@ -162,6 +167,22 @@ button:focus-visible {
 
 input[aria-invalid='true'] {
   border-color: var(--panel-error);
+}
+
+input[type='file'] {
+  padding: 0.35rem 0.5rem;
+}
+
+input[type='file']::file-selector-button {
+  font: inherit;
+  font-weight: 600;
+  margin-right: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--panel-borde);
+  border-radius: var(--panel-radio);
+  background: transparent;
+  color: var(--sl-color-white);
+  cursor: pointer;
 }
 
 .campo--casilla {
