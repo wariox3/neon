@@ -3,25 +3,46 @@
  * Genera la referencia de la API a partir de un esquema OpenAPI.
  *
  * Corre en TIEMPO DE COMPILACIÓN (`prebuild` y `predev`): el sitio publicado es
- * estático y nunca consulta la API. Lee el esquema de `OPENAPI_SOURCE`, que
- * acepta una ruta local o una URL http(s), y escribe páginas Markdown en
- * `src/content/docs/api/` más el fragmento de barra lateral que consume
- * `astro.config.mjs`.
+ * estático y nunca consulta la API. Lee el esquema del servicio, escribe páginas
+ * Markdown en `src/content/docs/api/` y el fragmento de barra lateral que
+ * consume `astro.config.mjs`.
  *
- * Por defecto lee el esquema publicado del servicio. Para trabajar contra otro:
+ * `PUBLIC_API_BASE` es la única variable que apunta al servicio: de ella salen
+ * tanto el esquema como la URL base de los ejemplos, así que las dos mitades de
+ * la compilación no pueden acabar mirando a dos APIs distintas. Sin definir,
+ * ambas son las de producción.
  *
- *   OPENAPI_SOURCE=http://localhost:8000/api/schema/?format=json npm run build
+ *   PUBLIC_API_BASE=http://localhost:8000 npm run build
+ *
+ * `OPENAPI_SOURCE` queda para lo que de verdad necesita ser distinto: leer el
+ * esquema de otro sitio, normalmente un archivo local.
+ *
  *   OPENAPI_SOURCE=../nobelio/openapi.json npm run build
+ *
+ * Las dos se pueden poner en el `.env`: este script lo carga igual que Astro, y
+ * lo que venga exportado en el entorno gana.
  */
 
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const ESQUEMA_PUBLICADO = 'https://api.rededoc.co/api/schema/?format=json';
-const ORIGEN = process.env.OPENAPI_SOURCE?.trim() || ESQUEMA_PUBLICADO;
+
+// El `.env` Astro lo carga solo; esto es Node a secas, así que hay que pedirlo,
+// y antes de leer nada de `process.env`. Lanza si el archivo no existe, que es
+// lo normal en el servidor: allí las variables van exportadas. Lo exportado
+// gana, igual que en Astro.
+try {
+  process.loadEnvFile(resolve(RAIZ, '.env'));
+} catch {
+  // sin `.env`: valores por defecto o lo que traiga el entorno
+}
+
+const API_PUBLICADA = 'https://api.rededoc.co';
+const API = (process.env.PUBLIC_API_BASE?.trim() || API_PUBLICADA).replace(/\/+$/, '');
+const ORIGEN = process.env.OPENAPI_SOURCE?.trim() || `${API}/api/schema/?format=json`;
 const EJEMPLO = resolve(RAIZ, 'openapi/ejemplo.json');
 const CACHE = resolve(RAIZ, 'openapi/.cache/openapi.json');
 const SALIDA = resolve(RAIZ, 'src/content/docs/api');
@@ -80,6 +101,26 @@ function yamlEscapado(texto) {
 }
 
 // ------------------------------------------------------------ lectura del esquema
+
+/**
+ * El `.env` lo ven los dos lados: este script lo carga a mano y Astro lo carga
+ * solo. Los archivos por modo (`.env.development`, `.env.production`) y los
+ * `.local` los carga Vite, así que solo los ve Astro: definir ahí
+ * `PUBLIC_API_BASE` compilaría los ejemplos contra un servicio y la referencia
+ * contra otro, y en silencio. Mejor avisar.
+ */
+function avisarEnvQueNoLeemos() {
+  if (process.env.PUBLIC_API_BASE?.trim()) return;
+  for (const archivo of ['.env.local', '.env.development', '.env.production']) {
+    const ruta = resolve(RAIZ, archivo);
+    if (!existsSync(ruta)) continue;
+    if (!/^\s*PUBLIC_API_BASE\s*=\s*\S/m.test(readFileSync(ruta, 'utf8'))) continue;
+    log(
+      `aviso: ${archivo} define PUBLIC_API_BASE, pero aquí solo se lee .env; ` +
+        `la referencia sale de ${API}. Muévela al .env o expórtala.`,
+    );
+  }
+}
 
 async function leerEsquema() {
   const esUrl = /^https?:\/\//i.test(ORIGEN);
@@ -234,12 +275,14 @@ function recogerOperaciones(esquema) {
   return operaciones;
 }
 
+/**
+ * URL base de los ejemplos. `PUBLIC_API_BASE` manda, porque es la misma que el
+ * panel usa en el navegador; si no está, el `servers[]` del esquema, y si el
+ * esquema tampoco lo trae, el servicio del que salió.
+ */
 function urlBase(esquema) {
-  return (
-    process.env.PUBLIC_API_BASE?.trim() ||
-    esquema.servers?.[0]?.url ||
-    'http://localhost:8000'
-  ).replace(/\/+$/, '');
+  if (process.env.PUBLIC_API_BASE?.trim()) return API;
+  return (esquema.servers?.[0]?.url || API).replace(/\/+$/, '');
 }
 
 /** Requisitos de seguridad que aplican a una operación (los suyos o los del esquema). */
@@ -718,6 +761,7 @@ function paginaIndice(esquema, porEtiqueta, provisional, origen) {
 // ------------------------------------------------------------------- principal
 
 async function principal() {
+  avisarEnvQueNoLeemos();
   const { esquema, origen } = await leerEsquema();
   const rutaEjemplo = !/^https?:\/\//i.test(ORIGEN) && resolve(RAIZ, ORIGEN) === EJEMPLO;
   const provisional = Boolean(esquema['x-neon-provisional']) || rutaEjemplo;

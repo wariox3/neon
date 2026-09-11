@@ -47,7 +47,8 @@ documentos siguen haciéndose por la API.
 
 ## Desarrollo
 
-Requiere Node 20.3+ (o 18.20.8+, o 22+).
+Requiere **Node 20.12+** (o 22+). El mínimo lo marca `process.loadEnvFile`, con el que
+`npm run referencia` carga el `.env`; Astro se conformaría con menos.
 
 ```bash
 npm install
@@ -59,7 +60,7 @@ npm run dev      # http://localhost:4321
 | `npm run dev` | Genera la referencia y levanta el servidor de desarrollo. |
 | `npm run build` | Genera la referencia y compila el sitio en `dist/`. |
 | `npm run preview` | Sirve `dist/` como quedaría publicado. |
-| `npm run referencia` | Solo regenera la referencia de la API. |
+| `npm run referencia` | Solo regenera la referencia de la API. Lee el `.env`, si lo hay. |
 | `npm run check` | Diagnóstico de TypeScript y de los archivos Astro. |
 
 `referencia` corre solo: npm la ejecuta en `predev` y `prebuild`.
@@ -103,11 +104,24 @@ Lo expone el backend con [drf-spectacular](https://drf-spectacular.readthedocs.i
 que configurar nada: `npm run build` lo descarga y regenera las páginas de `/api/`, así que
 la referencia nunca se desfasa respecto a la API.
 
-Para trabajar contra otro esquema está `OPENAPI_SOURCE`, que acepta **una ruta local o una
-URL `http(s)`**:
+Esa URL **sale de `PUBLIC_API_BASE`**, la misma variable que usa el panel: apuntarla a otro
+servicio mueve a la vez el esquema, los ejemplos de la referencia y las peticiones del
+navegador, así que una compilación no puede acabar mezclando dos APIs.
 
 ```bash
-OPENAPI_SOURCE=http://localhost:8000/api/schema/?format=json npm run build
+PUBLIC_API_BASE=http://localhost:8000 npm run build
+```
+
+Puede ir en un `.env` (copia `.env.example`) o exportada, que es lo que gana si están las
+dos. Tiene que ser **`.env`**, no `.env.development` ni `.env.production`: esos los carga
+Vite y solo los ve Astro, mientras que `npm run referencia` es un script de Node que carga
+el `.env` por su cuenta. Si defines la variable en uno de los del modo, el generador lo
+detecta y avisa.
+
+`OPENAPI_SOURCE` queda para cuando el esquema tiene que venir de **otro sitio** —una ruta
+local o una URL `http(s)`—, normalmente un archivo:
+
+```bash
 OPENAPI_SOURCE=../nobelio/openapi.json npm run build
 ```
 
@@ -139,8 +153,8 @@ una ruta o un campo cambia, ahí no avisa nadie.
   el esquema declara las etiquetas.
 - Cada operación es una página con su método y ruta, autenticación, parámetros, cuerpo,
   un ejemplo de `curl` y sus respuestas.
-- `PUBLIC_API_BASE` permite fijar la URL base de los ejemplos; si no, se usa el primer
-  `servers[]` del esquema.
+- `PUBLIC_API_BASE` fija el servicio: de ahí salen el esquema y la URL base de los
+  ejemplos. Si no está, los ejemplos usan el primer `servers[]` del esquema.
 
 ## Estructura
 

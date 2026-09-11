@@ -18,7 +18,7 @@ necesita: ver [Requisitos del dominio](#requisitos-del-dominio).
 
 | | |
 | --- | --- |
-| Node | 20.3+ (o 18.20.8+, o 22+) |
+| Node | 20.12+ (o 22+) |
 | Instalación | `npm ci` |
 | Compilación | `npm run build` |
 | Salida | `dist/` (archivos estáticos) |
@@ -100,12 +100,11 @@ npm run build
 rsync -a --delete dist/ /var/www/neon/
 ```
 
-`PUBLIC_API_BASE` se **exporta en el shell**, no en un `.env`: Astro sí leería el `.env`,
-pero tenerla junto al resto del despliegue evita compilar sin ella por descuido. La
-referencia de la API no necesita variable: el generador ya apunta al esquema publicado.
-
-Si alguna vez defines `OPENAPI_SOURCE`, tiene que ir exportada sí o sí: la lee
-`scripts/generar-referencia.mjs`, que es un script de Node normal y no carga `.env`.
+`PUBLIC_API_BASE` se **exporta en el shell**, no en un `.env`: los dos lados leerían el
+`.env` sin problema, pero tenerla junto al resto del despliegue evita compilar sin ella por
+descuido. La referencia de la API no necesita variable propia: el esquema sale de esta
+misma (`$PUBLIC_API_BASE/api/schema/?format=json`), así que sitio, panel y referencia
+apuntan al mismo servicio por construcción.
 
 > Si el servidor tiene 1 GB de RAM o menos, `astro build` puede quedarse sin memoria.
 > Alternativa: compilar en tu máquina o en CI y subir solo el resultado —
@@ -292,12 +291,13 @@ migraciones de este lado.
 ## Variables de entorno
 
 Las dos se leen **en tiempo de compilación**, no en ejecución. Cambiarlas no afecta a lo ya
-publicado: hay que volver a compilar y copiar.
+publicado: hay que volver a compilar y copiar. Pueden ir exportadas —lo que gana— o en un
+`.env`; no en `.env.production`, que lo carga Vite y no lo ve `npm run referencia`.
 
 | Variable | Para qué | En producción |
 | --- | --- | --- |
-| `PUBLIC_API_BASE` | URL base de la API. La usa el panel de `/app/` en cada petición del navegador, y los ejemplos de la referencia. | `https://api.rededoc.co` |
-| `OPENAPI_SOURCE` | Esquema del que se genera `/api/`. Ruta local o URL `http(s)`. | **No hace falta definirla**: por defecto ya lee `https://api.rededoc.co/api/schema/?format=json` |
+| `PUBLIC_API_BASE` | URL base de la API, y la única que apunta al servicio: la usa el panel de `/app/` en cada petición del navegador, los ejemplos de la referencia, y el generador para descargar el esquema de `$PUBLIC_API_BASE/api/schema/?format=json`. | `https://api.rededoc.co` |
+| `OPENAPI_SOURCE` | Esquema del que se genera `/api/`. Ruta local o URL `http(s)`. | **No hace falta definirla**: el esquema ya sale de `PUBLIC_API_BASE`. Solo para leerlo de otro sitio, normalmente un archivo. |
 
 `PUBLIC_API_BASE` queda **incrustada en el JavaScript** que se manda al navegador
 (`import.meta.env`). Si no se define, el panel apunta a `http://localhost:8000` y en

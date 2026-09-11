@@ -4,6 +4,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "Sitio público de RedEDoc: facturación electrónica DIAN (Colombia)",
+  "engines": {
+    "node": ">=20.12"
+  },
   "scripts": {
     "referencia": "node scripts/generar-referencia.mjs",
     "predev": "npm run referencia",
