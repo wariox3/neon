@@ -479,27 +479,6 @@ thead abbr[title] {
   color: var(--sl-color-gray-3);
 }
 
-/* --- Bloque plegable de campos opcionales --------------------------------- */
-
-/* Lo que vacío ya funciona (los datos del fabricante) no tiene por qué ocupar
-   pantalla: se pliega y quien lo necesite lo abre. */
-.plegable {
-  margin: 1rem 0;
-  border: 1px solid var(--panel-borde);
-  border-radius: var(--panel-radio);
-  padding: 0.75rem 1rem;
-}
-
-.plegable > summary {
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.9375rem;
-}
-
-.plegable[open] > summary {
-  margin-bottom: 0.5rem;
-}
-
 /* Campo de contraseña con el interruptor «Ver» dentro. */
 .campo-clave {
   position: relative;

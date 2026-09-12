@@ -75,7 +75,6 @@ interface Software {
   pin: string;
   test_set_id: string;
   set_pruebas_aceptado?: boolean;
-  activo?: boolean;
 }
 
 const TIPOS_SOFTWARE: Record<string, string> = {
@@ -388,18 +387,17 @@ function ListaCertificados({ items, error, alEliminar }: {
   );
 }
 
-/** Lo que el formulario de software manda, y a lo que vuelve tras crear uno. */
+/**
+ * Lo que el formulario de software manda, y a lo que vuelve tras crear uno.
+ *
+ * `set_pruebas_aceptado` no está: lo mueve la DIAN al aceptar el Set de
+ * Pruebas, no se toca desde la API. Se lee en la ficha y ya.
+ */
 const SOFTWARE_VACIO = {
   tipo: '',
   identificador: '',
   pin: '',
   test_set_id: '',
-  set_pruebas_aceptado: false,
-  activo: true,
-  codigo_proveedor_tecnologico: '',
-  fabricante_nombre: '',
-  fabricante_razon_social: '',
-  fabricante_nombre_software: '',
 };
 
 type CamposSoftware = typeof SOFTWARE_VACIO;
@@ -412,9 +410,10 @@ type CamposSoftware = typeof SOFTWARE_VACIO;
  * Pruebas —numeración del sandbox, que no es suya—, así que solo vale para un
  * emisor en pruebas y no es lo que se pide aquí.
  *
- * Los campos del fabricante quedan plegados porque vacíos ya funcionan: el
- * servidor cae en los valores del despliegue (`DIAN_FABRICANTE_*`). Solo
- * estorban a quien no necesita cambiarlos.
+ * Solo pide lo que la DIAN entrega. Los datos del fabricante y el código del
+ * proveedor tecnológico no se preguntan: vacíos, el servicio usa los del
+ * despliegue (`DIAN_FABRICANTE_*`), que es lo que corresponde con software
+ * propio.
  */
 function CrearSoftware({ emisor, yaRegistrados, alCrear }: {
   emisor: number;
@@ -501,16 +500,23 @@ function CrearSoftware({ emisor, yaRegistrados, alCrear }: {
           id="pin"
           etiqueta="PIN del software"
           error={errorDe(error, 'pin')}
-          ayuda="El del software ante la DIAN, no la clave del certificado."
+          ayuda="El del software ante la DIAN, no la clave del certificado. Lo habitual es 12345."
         >
           {/* A la vista y sin autocompletado: se copia del portal de la DIAN y
               hay que poder comprobarlo, y no es una contraseña que el navegador
-              deba ofrecerse a guardar. */}
+              deba ofrecerse a guardar.
+
+              El 12345 va de sugerencia y no de valor puesto: es el PIN que casi
+              todo el mundo elige en el portal, pero entra en el cálculo del CUFE,
+              así que hay que teclearlo mirando el del emisor. Traerlo escrito
+              invita a guardar uno que no es y a que lo rechacen todos los
+              documentos. */}
           <input
             id="pin"
             required
             maxLength={100}
             autoComplete="off"
+            placeholder="12345"
             className="monospacio"
             value={datos.pin}
             onChange={(e) => poner('pin', e.target.value)}
@@ -532,93 +538,6 @@ function CrearSoftware({ emisor, yaRegistrados, alCrear }: {
           />
         </Campo>
       </div>
-
-      <div className="casillas">
-        <label className="casilla">
-          <input
-            type="checkbox"
-            checked={datos.activo}
-            onChange={(e) => poner('activo', e.target.checked)}
-          />
-          <span>Activo — es el software con el que se emite.</span>
-        </label>
-        <label className="casilla">
-          <input
-            type="checkbox"
-            checked={datos.set_pruebas_aceptado}
-            onChange={(e) => poner('set_pruebas_aceptado', e.target.checked)}
-          />
-          <span>
-            Set de pruebas aceptado — márcalo solo cuando la DIAN lo haya aceptado: a
-            partir de ahí los envíos pasan a <code>SendBillSync</code>.
-          </span>
-        </label>
-      </div>
-
-      <details className="plegable">
-        <summary>Fabricante y proveedor tecnológico (opcional)</summary>
-        <p className="panel-guia">
-          Vacíos, el servicio usa los del despliegue. Solo hay que tocarlos cuando el
-          software lo fabrica alguien distinto.
-        </p>
-        <div className="rejilla">
-          <Campo
-            id="codigo_proveedor_tecnologico"
-            etiqueta="Código del PT"
-            error={errorDe(error, 'codigo_proveedor_tecnologico')}
-            ayuda="Tres dígitos. Con software propio suele ser 000."
-          >
-            <input
-              id="codigo_proveedor_tecnologico"
-              maxLength={3}
-              inputMode="numeric"
-              className="monospacio"
-              value={datos.codigo_proveedor_tecnologico}
-              onChange={(e) => poner('codigo_proveedor_tecnologico', e.target.value)}
-            />
-          </Campo>
-
-          <Campo
-            id="fabricante_nombre_software"
-            etiqueta="Nombre del software"
-            error={errorDe(error, 'fabricante_nombre_software')}
-          >
-            <input
-              id="fabricante_nombre_software"
-              maxLength={200}
-              value={datos.fabricante_nombre_software}
-              onChange={(e) => poner('fabricante_nombre_software', e.target.value)}
-            />
-          </Campo>
-
-          <Campo
-            id="fabricante_nombre"
-            etiqueta="Nombre y apellido del fabricante"
-            error={errorDe(error, 'fabricante_nombre')}
-          >
-            <input
-              id="fabricante_nombre"
-              maxLength={200}
-              value={datos.fabricante_nombre}
-              onChange={(e) => poner('fabricante_nombre', e.target.value)}
-            />
-          </Campo>
-
-          <Campo
-            id="fabricante_razon_social"
-            etiqueta="Razón social del fabricante"
-            error={errorDe(error, 'fabricante_razon_social')}
-            ayuda="La del fabricante del software, no la del emisor."
-          >
-            <input
-              id="fabricante_razon_social"
-              maxLength={200}
-              value={datos.fabricante_razon_social}
-              onChange={(e) => poner('fabricante_razon_social', e.target.value)}
-            />
-          </Campo>
-        </div>
-      </details>
 
       <div className="acciones">
         <button type="submit" disabled={enviando}>
@@ -692,7 +611,6 @@ function ListaSoftware({ items, error }: { items: Software[] | null; error: unkn
             <Dato etiqueta="Set de pruebas aceptado">
               <Marca valor={software.set_pruebas_aceptado ?? false} />
             </Dato>
-            <Dato etiqueta="Activo"><Marca valor={software.activo ?? false} /></Dato>
           </dl>
         </article>
       ))}
@@ -911,15 +829,18 @@ export default function EmisorDetalle() {
           {nombrePorCodigo(departamentos, emisor.departamento)}
         </Dato>
         <Dato etiqueta="Municipio">{municipio || emisor.municipio}</Dato>
+        {/* La dirección va justo antes del código postal y en columna normal:
+            los dos se leen juntos, y una fila entera para ella dejaba el
+            código postal descolgado arriba. */}
+        <Dato etiqueta="Dirección">{emisor.direccion}</Dato>
         <Dato etiqueta="Código postal">{emisor.codigo_postal}</Dato>
-        <Dato etiqueta="Dirección" ancho>{emisor.direccion}</Dato>
       </dl>
 
       <h2>Contacto</h2>
       <dl className="datos">
         <Dato etiqueta="Correo">{emisor.correo}</Dato>
+        <Dato etiqueta="Correo en copia">{emisor.correo_copia}</Dato>
         <Dato etiqueta="Teléfono">{emisor.telefono}</Dato>
-        <Dato etiqueta="Correo en copia" ancho>{emisor.correo_copia}</Dato>
       </dl>
 
       <h2>Habilitación ante la DIAN</h2>
