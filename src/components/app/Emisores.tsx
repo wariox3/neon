@@ -20,6 +20,58 @@ interface EmisorEnLista {
   habilitado_facturacion: boolean;
   habilitado_nomina: boolean;
   habilitado_documento_equivalente: boolean;
+  certificado_activo: boolean;
+  certificado_vence: string | null;
+}
+
+/** A partir de aquí la columna del certificado avisa en vez de tranquilizar. */
+const DIAS_DE_AVISO = 30;
+
+/** Días enteros de hoy a una fecha `YYYY-MM-DD`; negativo si ya pasó. */
+function diasHasta(iso: string): number {
+  // La fecha llega sin hora: se lee como local para que no se adelante un día.
+  const vence = new Date(`${iso}T00:00:00`);
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  return Math.round((vence.getTime() - hoy.getTime()) / 86_400_000);
+}
+
+function fecha(iso: string): string {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('es-CO', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+/**
+ * El certificado del emisor en una celda.
+ *
+ * `certificado_activo` solo dice si hay un .p12 cargado; la vigencia la pone la
+ * fecha, así que el estado se calcula aquí y no lo decide el servidor: al día
+ * siguiente de vencer, la misma respuesta ya se pinta en rojo.
+ */
+function EstadoCertificado({ activo, vence }: { activo: boolean; vence: string | null }) {
+  if (!activo) return <Marca valor={false} no="Sin certificado" />;
+  if (!vence) return <span className="etiqueta etiqueta--si">Cargado</span>;
+
+  const dias = diasHasta(vence);
+  const tono = dias < 0 ? 'alerta' : dias <= DIAS_DE_AVISO ? 'aviso' : 'si';
+
+  return (
+    <span className="certificado-estado">
+      <span className={`etiqueta etiqueta--${tono}`}>
+        {dias < 0
+          ? 'Vencido'
+          : dias === 0
+            ? 'Vence hoy'
+            : dias <= DIAS_DE_AVISO
+              ? `Vence en ${dias} d`
+              : 'Vigente'}
+      </span>
+      <span className="certificado-estado__fecha">{fecha(vence)}</span>
+    </span>
+  );
 }
 
 export default function Emisores() {
@@ -132,9 +184,10 @@ export default function Emisores() {
                 <tr>
                   <th>Identificación</th>
                   <th>Razón social</th>
-                  <th>Facturación</th>
-                  <th>Nómina</th>
-                  <th>Equivalente</th>
+                  <th><abbr title="Facturación">FAC</abbr></th>
+                  <th><abbr title="Nómina">NOM</abbr></th>
+                  <th><abbr title="Documento equivalente">EQU</abbr></th>
+                  <th>Certificado</th>
                   <th>Activo</th>
                   <th aria-label="Acciones" />
                 </tr>
@@ -150,6 +203,12 @@ export default function Emisores() {
                     <td><Marca valor={emisor.habilitado_facturacion} /></td>
                     <td><Marca valor={emisor.habilitado_nomina} /></td>
                     <td><Marca valor={emisor.habilitado_documento_equivalente} /></td>
+                    <td>
+                      <EstadoCertificado
+                        activo={emisor.certificado_activo}
+                        vence={emisor.certificado_vence}
+                      />
+                    </td>
                     <td><Marca valor={emisor.activo} /></td>
                     <td className="acciones-fila">
                       <a href={`/app/emisores/detalle/?id=${emisor.id}`}>Ver</a>

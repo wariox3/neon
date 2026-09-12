@@ -192,6 +192,10 @@ export function SesionNoLista({ sesion }: { sesion: Sesion }) {
  * contraseñas del navegador sigue reconociéndolo por su `autoComplete`.
  * Arranca oculto siempre: quien lo enseña lo decide, y no se recuerda entre
  * pantallas para no dejar la contraseña a la vista sin querer.
+ *
+ * `autoComplete="off"` es para las claves que no son de la cuenta —la del
+ * `.p12`, por ejemplo—: se teclean una vez, no se vuelven a usar, y no tiene
+ * sentido que el gestor se ofrezca a guardarlas.
  */
 export function EntradaContrasena({
   id,
@@ -204,7 +208,7 @@ export function EntradaContrasena({
   id: string;
   valor: string;
   onCambio: (valor: string) => void;
-  autoComplete: 'current-password' | 'new-password';
+  autoComplete: 'current-password' | 'new-password' | 'off';
   autoFocus?: boolean;
   name?: string;
 }) {

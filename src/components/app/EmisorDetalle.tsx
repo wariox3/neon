@@ -35,6 +35,7 @@ import {
   Aviso,
   Campo,
   Cargando,
+  EntradaContrasena,
   ErrorGeneral,
   Marca,
   Pestanas,
@@ -74,6 +75,7 @@ interface Software {
   pin: string;
   test_set_id: string;
   set_pruebas_aceptado?: boolean;
+  activo?: boolean;
 }
 
 const TIPOS_SOFTWARE: Record<string, string> = {
@@ -153,6 +155,8 @@ interface Emisor {
   habilitado_facturacion: boolean;
   habilitado_nomina: boolean;
   habilitado_documento_equivalente: boolean;
+  certificado_activo: boolean;
+  certificado_vence: string | null;
   ambiente_facturacion: number;
   ambiente_nomina: number;
   ambiente_documento_equivalente: number;
@@ -231,8 +235,8 @@ function CargarCertificado({ emisor, alCargar }: {
     <form onSubmit={cargar}>
       <p className="panel-guia">
         El servidor valida el <code>.p12</code> antes de guardarlo: la clave, la vigencia y
-        que el NIT sea el de este emisor. Cada emisor mantiene un solo certificado vigente,
-        así que al cargar uno nuevo los anteriores quedan como histórico.
+        que el NIT sea el de este emisor. Cada emisor tiene un solo certificado, así que
+        para cambiarlo hay que eliminar el que haya y cargar el nuevo.
       </p>
 
       {cargado && <Aviso tipo="exito">Certificado cargado.</Aviso>}
@@ -254,13 +258,11 @@ function CargarCertificado({ emisor, alCargar }: {
           error={errorDe(error, 'clave')}
           ayuda="La del archivo, no la de tu cuenta."
         >
-          <input
+          <EntradaContrasena
             id="clave"
-            type="password"
-            required
             autoComplete="off"
-            value={clave}
-            onChange={(e) => setClave(e.target.value)}
+            valor={clave}
+            onCambio={setClave}
           />
         </Campo>
       </div>
@@ -274,50 +276,356 @@ function CargarCertificado({ emisor, alCargar }: {
   );
 }
 
-/** Pestaña «Certificado»: los certificados de firma cargados para el emisor. */
-function PestanaCertificado({ emisor }: { emisor: number }) {
+/**
+ * Pestaña «Certificado»: el certificado de firma del emisor.
+ *
+ * El formulario de carga solo sale cuando no hay certificado. No es un adorno:
+ * la API no tiene reemplazo —solo `cargar` y `destroy`—, así que dejar el
+ * formulario a la vista con uno ya cargado invita a un intento que el servidor
+ * rechaza. Para cambiarlo se elimina el actual desde la lista.
+ */
+function PestanaCertificado({ emisor }: { emisor: Emisor }) {
   const { items, error, recargar } = useDelEmisor<Certificado>(
     '/api/emisores/certificado/',
-    emisor,
+    emisor.id,
   );
+
+  // La lista es la que manda, porque es la que se recarga al cargar y al
+  // eliminar; la bandera del emisor solo cubre el rato en que aún no ha
+  // llegado, para no enseñar el formulario un instante y esconderlo después.
+  const tiene = items === null ? emisor.certificado_activo : items.length > 0;
 
   return (
     <>
-      <CargarCertificado emisor={emisor} alCargar={recargar} />
+      {tiene ? (
+        <p className="panel-guia">
+          Este emisor ya tiene certificado
+          {emisor.certificado_vence ? `, vigente hasta el ${emisor.certificado_vence}` : ''}.
+          Solo puede haber uno: para cambiarlo, elimina el actual en la lista de abajo y
+          carga el nuevo.
+        </p>
+      ) : (
+        <CargarCertificado emisor={emisor.id} alCargar={recargar} />
+      )}
       <h3>Certificados del emisor</h3>
-      <ListaCertificados items={items} error={error} />
+      <ListaCertificados items={items} error={error} alEliminar={recargar} />
     </>
   );
 }
 
-function ListaCertificados({ items, error }: { items: Certificado[] | null; error: unknown }) {
+function ListaCertificados({ items, error, alEliminar }: {
+  items: Certificado[] | null;
+  error: unknown;
+  alEliminar: () => void;
+}) {
+  // El fallo de la baja es aparte del de la carga de la lista: uno no invalida
+  // al otro, y el de la baja tiene que salir junto a la tabla que la ofrece.
+  const [errorBaja, setErrorBaja] = useState<unknown>(null);
+  const [borrando, setBorrando] = useState<number | null>(null);
+
   if (error) return <ErrorGeneral error={error} />;
   if (items === null) return <Cargando />;
   if (items.length === 0) {
     return <p className="vacio">Este emisor no tiene ningún certificado cargado.</p>;
   }
 
+  async function eliminar(certificado: Certificado) {
+    const seguro = window.confirm(
+      `Eliminar el certificado "${certificado.nombre_archivo}". El emisor se queda sin ` +
+        'con qué firmar —no podrá emitir documentos— hasta que cargues otro, y el ' +
+        'archivo no se puede recuperar. ¿Seguimos?',
+    );
+    if (!seguro) return;
+    setErrorBaja(null);
+    setBorrando(certificado.id);
+    try {
+      await api(`/api/emisores/certificado/${certificado.id}/`, { metodo: 'DELETE' });
+      alEliminar();
+    } catch (fallo) {
+      setErrorBaja(fallo);
+    } finally {
+      setBorrando(null);
+    }
+  }
+
   return (
-    <div className="tabla-contenedor">
-      <table>
-        <thead>
-          <tr>
-            <th>Archivo</th>
-            <th>Vigencia</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((certificado) => (
-            <tr key={certificado.id}>
-              <td className="monospacio">{certificado.nombre_archivo}</td>
-              <td className="monospacio">
-                {certificado.vigente_desde ?? '—'} → {certificado.vigente_hasta ?? '—'}
-              </td>
+    <>
+      <ErrorGeneral error={errorBaja} />
+      <div className="tabla-contenedor">
+        <table>
+          <thead>
+            <tr>
+              <th>Archivo</th>
+              <th>Vigencia</th>
+              <th aria-label="Acciones" />
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {items.map((certificado) => (
+              <tr key={certificado.id}>
+                <td className="monospacio">{certificado.nombre_archivo}</td>
+                <td className="monospacio">
+                  {certificado.vigente_desde ?? '—'} → {certificado.vigente_hasta ?? '—'}
+                </td>
+                <td>
+                  <div className="acciones" style={{ margin: 0 }}>
+                    <button
+                      type="button"
+                      className="peligro"
+                      disabled={borrando !== null}
+                      onClick={() => void eliminar(certificado)}
+                    >
+                      {borrando === certificado.id ? 'Eliminando…' : 'Eliminar'}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+/** Lo que el formulario de software manda, y a lo que vuelve tras crear uno. */
+const SOFTWARE_VACIO = {
+  tipo: '',
+  identificador: '',
+  pin: '',
+  test_set_id: '',
+  set_pruebas_aceptado: false,
+  activo: true,
+  codigo_proveedor_tecnologico: '',
+  fabricante_nombre: '',
+  fabricante_razon_social: '',
+  fabricante_nombre_software: '',
+};
+
+type CamposSoftware = typeof SOFTWARE_VACIO;
+
+/**
+ * Alta de un software DIAN.
+ *
+ * Va por `POST /api/emisores/software/` y no por `crear-habilitacion/`: ese
+ * atajo, además del software, le siembra al emisor la resolución del Set de
+ * Pruebas —numeración del sandbox, que no es suya—, así que solo vale para un
+ * emisor en pruebas y no es lo que se pide aquí.
+ *
+ * Los campos del fabricante quedan plegados porque vacíos ya funcionan: el
+ * servidor cae en los valores del despliegue (`DIAN_FABRICANTE_*`). Solo
+ * estorban a quien no necesita cambiarlos.
+ */
+function CrearSoftware({ emisor, yaRegistrados, alCrear }: {
+  emisor: number;
+  yaRegistrados: string[];
+  alCrear: () => void;
+}) {
+  const [datos, setDatos] = useState(SOFTWARE_VACIO);
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [creado, setCreado] = useState(false);
+
+  function poner<C extends keyof CamposSoftware>(campo: C, valor: CamposSoftware[C]) {
+    setDatos((previos) => ({ ...previos, [campo]: valor }));
+  }
+
+  async function crear(evento: SubmitEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    setEnviando(true);
+    setError(null);
+    setCreado(false);
+    try {
+      await api('/api/emisores/software/', {
+        metodo: 'POST',
+        cuerpo: { ...datos, emisor },
+      });
+      setDatos(SOFTWARE_VACIO);
+      setCreado(true);
+      alCrear();
+    } catch (fallo) {
+      setError(fallo);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <form onSubmit={crear}>
+      <p className="panel-guia">
+        Los datos que la DIAN entrega al registrar el software, uno por operación. El PIN
+        entra en el cálculo del CUFE, así que un dígito de más deja todos los documentos
+        rechazados. <a href="/guias/habilitacion-dian/">Cómo se obtienen</a>.
+      </p>
+
+      {creado && <Aviso tipo="exito">Software registrado.</Aviso>}
+      <ErrorGeneral error={error} />
+
+      <div className="rejilla">
+        <Campo id="tipo" etiqueta="Tipo de software" error={errorDe(error, 'tipo')}>
+          <select
+            id="tipo"
+            required
+            value={datos.tipo}
+            onChange={(e) => poner('tipo', e.target.value)}
+          >
+            <option value="">Elige…</option>
+            {Object.entries(TIPOS_SOFTWARE).map(([valor, nombre]) => (
+              <option key={valor} value={valor}>
+                {nombre}
+                {/* Aviso, no impedimento: que ya haya uno de ese tipo es cosa
+                    del servidor, y el nuevo puede ser justo el relevo. */}
+                {yaRegistrados.includes(valor) ? ' — ya tiene uno' : ''}
+              </option>
+            ))}
+          </select>
+        </Campo>
+
+        <Campo
+          id="identificador"
+          etiqueta="ID del software"
+          error={errorDe(error, 'identificador')}
+          ayuda="El SoftwareID que asigna la DIAN."
+        >
+          <input
+            id="identificador"
+            required
+            maxLength={100}
+            className="monospacio"
+            value={datos.identificador}
+            onChange={(e) => poner('identificador', e.target.value)}
+          />
+        </Campo>
+
+        <Campo
+          id="pin"
+          etiqueta="PIN del software"
+          error={errorDe(error, 'pin')}
+          ayuda="El del software ante la DIAN, no la clave del certificado."
+        >
+          {/* A la vista y sin autocompletado: se copia del portal de la DIAN y
+              hay que poder comprobarlo, y no es una contraseña que el navegador
+              deba ofrecerse a guardar. */}
+          <input
+            id="pin"
+            required
+            maxLength={100}
+            autoComplete="off"
+            className="monospacio"
+            value={datos.pin}
+            onChange={(e) => poner('pin', e.target.value)}
+          />
+        </Campo>
+
+        <Campo
+          id="test_set_id"
+          etiqueta="ID del set de pruebas"
+          error={errorDe(error, 'test_set_id')}
+          ayuda="El TestSetId de la habilitación. Se puede dejar vacío y ponerlo después."
+        >
+          <input
+            id="test_set_id"
+            maxLength={100}
+            className="monospacio"
+            value={datos.test_set_id}
+            onChange={(e) => poner('test_set_id', e.target.value)}
+          />
+        </Campo>
+      </div>
+
+      <div className="casillas">
+        <label className="casilla">
+          <input
+            type="checkbox"
+            checked={datos.activo}
+            onChange={(e) => poner('activo', e.target.checked)}
+          />
+          <span>Activo — es el software con el que se emite.</span>
+        </label>
+        <label className="casilla">
+          <input
+            type="checkbox"
+            checked={datos.set_pruebas_aceptado}
+            onChange={(e) => poner('set_pruebas_aceptado', e.target.checked)}
+          />
+          <span>
+            Set de pruebas aceptado — márcalo solo cuando la DIAN lo haya aceptado: a
+            partir de ahí los envíos pasan a <code>SendBillSync</code>.
+          </span>
+        </label>
+      </div>
+
+      <details className="plegable">
+        <summary>Fabricante y proveedor tecnológico (opcional)</summary>
+        <p className="panel-guia">
+          Vacíos, el servicio usa los del despliegue. Solo hay que tocarlos cuando el
+          software lo fabrica alguien distinto.
+        </p>
+        <div className="rejilla">
+          <Campo
+            id="codigo_proveedor_tecnologico"
+            etiqueta="Código del PT"
+            error={errorDe(error, 'codigo_proveedor_tecnologico')}
+            ayuda="Tres dígitos. Con software propio suele ser 000."
+          >
+            <input
+              id="codigo_proveedor_tecnologico"
+              maxLength={3}
+              inputMode="numeric"
+              className="monospacio"
+              value={datos.codigo_proveedor_tecnologico}
+              onChange={(e) => poner('codigo_proveedor_tecnologico', e.target.value)}
+            />
+          </Campo>
+
+          <Campo
+            id="fabricante_nombre_software"
+            etiqueta="Nombre del software"
+            error={errorDe(error, 'fabricante_nombre_software')}
+          >
+            <input
+              id="fabricante_nombre_software"
+              maxLength={200}
+              value={datos.fabricante_nombre_software}
+              onChange={(e) => poner('fabricante_nombre_software', e.target.value)}
+            />
+          </Campo>
+
+          <Campo
+            id="fabricante_nombre"
+            etiqueta="Nombre y apellido del fabricante"
+            error={errorDe(error, 'fabricante_nombre')}
+          >
+            <input
+              id="fabricante_nombre"
+              maxLength={200}
+              value={datos.fabricante_nombre}
+              onChange={(e) => poner('fabricante_nombre', e.target.value)}
+            />
+          </Campo>
+
+          <Campo
+            id="fabricante_razon_social"
+            etiqueta="Razón social del fabricante"
+            error={errorDe(error, 'fabricante_razon_social')}
+            ayuda="La del fabricante del software, no la del emisor."
+          >
+            <input
+              id="fabricante_razon_social"
+              maxLength={200}
+              value={datos.fabricante_razon_social}
+              onChange={(e) => poner('fabricante_razon_social', e.target.value)}
+            />
+          </Campo>
+        </div>
+      </details>
+
+      <div className="acciones">
+        <button type="submit" disabled={enviando}>
+          {enviando ? 'Registrando…' : 'Registrar el software'}
+        </button>
+      </div>
+    </form>
   );
 }
 
@@ -327,9 +635,37 @@ function ListaCertificados({ items, error }: { items: Certificado[] | null; erro
  * En ficha y no en tabla porque cada uno trae una docena de campos, y el PIN
  * arranca tapado: es una credencial, no un dato más.
  */
-function PestanaSoftware({ emisor }: { emisor: number }) {
-  const { items, error } = useDelEmisor<Software>('/api/emisores/software/', emisor);
+function PestanaSoftware({ emisor }: { emisor: Emisor }) {
+  const { items, error, recargar } = useDelEmisor<Software>(
+    '/api/emisores/software/',
+    emisor.id,
+  );
 
+  return (
+    <>
+      {/* El orden de la habilitación no es una recomendación: el servidor exige
+          certificado activo y vigente para registrar software, así que sin él el
+          formulario solo daría un 400. */}
+      {emisor.certificado_activo ? (
+        <CrearSoftware
+          emisor={emisor.id}
+          yaRegistrados={items?.map((software) => software.tipo) ?? []}
+          alCrear={recargar}
+        />
+      ) : (
+        <p className="panel-guia">
+          Para registrar software hace falta antes un certificado activo y vigente: es lo
+          que firma la habilitación. Cárgalo en la pestaña «Certificado».
+        </p>
+      )}
+
+      <h3>Software del emisor</h3>
+      <ListaSoftware items={items} error={error} />
+    </>
+  );
+}
+
+function ListaSoftware({ items, error }: { items: Software[] | null; error: unknown }) {
   if (error) return <ErrorGeneral error={error} />;
   if (items === null) return <Cargando />;
   if (items.length === 0) {
@@ -356,6 +692,7 @@ function PestanaSoftware({ emisor }: { emisor: number }) {
             <Dato etiqueta="Set de pruebas aceptado">
               <Marca valor={software.set_pruebas_aceptado ?? false} />
             </Dato>
+            <Dato etiqueta="Activo"><Marca valor={software.activo ?? false} /></Dato>
           </dl>
         </article>
       ))}
@@ -622,12 +959,12 @@ export default function EmisorDetalle() {
           {
             id: 'certificado',
             titulo: 'Certificado',
-            render: () => <PestanaCertificado emisor={emisor.id} />,
+            render: () => <PestanaCertificado emisor={emisor} />,
           },
           {
             id: 'software',
             titulo: 'Software',
-            render: () => <PestanaSoftware emisor={emisor.id} />,
+            render: () => <PestanaSoftware emisor={emisor} />,
           },
           {
             id: 'resoluciones',

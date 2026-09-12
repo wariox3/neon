@@ -9,6 +9,7 @@
   --panel-fondo-sutil: var(--sl-color-gray-6);
   --panel-radio: 0.5rem;
   --panel-error: #f5a3a3;
+  --panel-aviso: #e7b765;
   --panel-exito: var(--marca-verde);
 }
 
@@ -16,6 +17,7 @@
   --panel-borde: var(--sl-color-gray-5);
   --panel-fondo-sutil: var(--sl-color-gray-7, #f4f6f9);
   --panel-error: #b42318;
+  --panel-aviso: #9a5b06;
   --panel-exito: #0a7a52;
 }
 
@@ -345,6 +347,39 @@ tbody tr:last-child td {
   color: var(--sl-color-gray-3);
 }
 
+/* Certificado por vencer: avisa sin dar la alarma todavía. */
+.etiqueta--aviso {
+  color: var(--panel-aviso);
+  border-color: currentcolor;
+}
+
+/* Certificado vencido: el emisor ya no puede firmar. */
+.etiqueta--alerta {
+  color: var(--panel-error);
+  border-color: currentcolor;
+}
+
+/* La celda del certificado: el estado arriba, la fecha debajo en pequeño. */
+.certificado-estado {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+
+.certificado-estado__fecha {
+  font-size: 0.75rem;
+  color: var(--sl-color-gray-3);
+  white-space: nowrap;
+}
+
+/* Los títulos abreviados (FAC, NOM, EQU) llevan su nombre entero en el
+   `title`; sin esto el navegador les pinta un subrayado de puntos. */
+thead abbr[title] {
+  text-decoration: none;
+  cursor: help;
+}
+
 .paginacion {
   display: flex;
   align-items: center;
@@ -442,6 +477,27 @@ tbody tr:last-child td {
 
 .casilla .monospacio {
   color: var(--sl-color-gray-3);
+}
+
+/* --- Bloque plegable de campos opcionales --------------------------------- */
+
+/* Lo que vacío ya funciona (los datos del fabricante) no tiene por qué ocupar
+   pantalla: se pliega y quien lo necesite lo abre. */
+.plegable {
+  margin: 1rem 0;
+  border: 1px solid var(--panel-borde);
+  border-radius: var(--panel-radio);
+  padding: 0.75rem 1rem;
+}
+
+.plegable > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.plegable[open] > summary {
+  margin-bottom: 0.5rem;
 }
 
 /* Campo de contraseña con el interruptor «Ver» dentro. */
