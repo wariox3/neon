@@ -54,7 +54,11 @@ const { titulo, navegacion = true } = Astro.props;
       <BarraPanel client:only="react" />
     ) : (
       <header class="panel-barra">
-        <a class="panel-barra__marca" href="/">RedEDoc</a>
+        <a class="panel-barra__marca marca" href="/" translate="no"
+          ><span class="marca__red">Red</span><span class="marca__e">E</span><span class="marca__doc"
+            >Doc</span
+          ></a
+        >
         <nav class="panel-barra__enlaces">
           <a href="/">Volver al sitio</a>
         </nav>

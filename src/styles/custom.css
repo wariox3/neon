@@ -70,6 +70,30 @@
   --sl-font: 'Roboto', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
+/* --- Marca en la cabecera -------------------------------------------------- */
+
+/*
+ * «RedEDoc» con los colores del logo, en la cabecera del sitio y en la del panel.
+ * El verde es el de la «E» del logo, que no coincide con el verde del manual.
+ * Es un logotipo, así que no se le exige ratio de contraste; aun así, sobre fondo
+ * oscuro «Red» pasa de oxford a blanco, como en la versión del logo para oscuro.
+ */
+.marca__red {
+  color: var(--sl-color-white);
+}
+
+:root[data-theme='light'] .marca__red {
+  color: var(--marca-oxford);
+}
+
+.marca__e {
+  color: #00c48c;
+}
+
+.marca__doc {
+  color: var(--marca-oceano);
+}
+
 /* --- Portada -------------------------------------------------------------- */
 
 /*
@@ -80,6 +104,14 @@
 .hero h1 {
   font-weight: 900;
   letter-spacing: -0.02em;
+  /* El titular ocupa varias líneas: con el 1.2 de Starlight quedan separadas. */
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+/* «Gratis.», en el color de los enlaces para que resalte sin salirse de la paleta. */
+.hero h1 .destacado {
+  color: var(--sl-color-accent-high);
 }
 
 .hero .tagline {
@@ -89,21 +121,20 @@
   max-width: 34ch;
 }
 
-/* La entradilla que sigue al héroe: dice a quién le habla el servicio. */
-.entradilla {
-  max-width: 62ch;
-  margin-inline: auto;
-  padding: 1.25rem 1.5rem;
-  border-left: 3px solid var(--marca-oceano);
-  border-radius: 0 var(--sl-radius, 0.5rem) var(--sl-radius, 0.5rem) 0;
-  background: var(--sl-color-gray-6);
-  font-size: var(--sl-text-lg);
-  line-height: 1.55;
+.hero .tagline > p {
+  margin: 0;
 }
 
-/* MDX envuelve el texto en su propio `<p>`; el margen sobra dentro del recuadro. */
-.entradilla > p {
-  margin: 0;
+/* Quién pone la infraestructura: debajo del lema, un escalón por debajo. */
+.hero .tagline > .hero-apoyo {
+  margin-top: 0.75rem;
+  font-size: var(--sl-text-sm);
+  font-weight: 400;
+  color: var(--sl-color-gray-3);
+}
+
+.hero-apoyo a {
+  color: var(--sl-color-accent-high);
 }
 
 /* Los tres pasos: qué pone cada parte. */
@@ -153,6 +184,41 @@
   color: var(--sl-color-gray-3);
   font-size: var(--sl-text-sm);
   line-height: 1.5;
+}
+
+/* Preguntas sobre el servicio gratuito: mismo recuadro que los pasos, sin número. */
+.preguntas {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin-block: 1.5rem;
+}
+
+.preguntas > div {
+  padding: 1.1rem 1.25rem 1.25rem;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.5rem;
+  background: var(--sl-color-gray-6);
+}
+
+/* Starlight separa con `margin-top` cada bloque que sigue a otro; en una rejilla
+   eso baja todas las tarjetas menos la primera. */
+.sl-markdown-content .preguntas > div {
+  margin-top: 0;
+}
+
+.preguntas h3 {
+  margin: 0 0 0.35rem;
+  font-size: var(--sl-text-base);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.preguntas p {
+  margin: 0;
+  color: var(--sl-color-gray-2);
+  font-size: var(--sl-text-sm);
+  line-height: 1.55;
 }
 
 /* Atribución de la empresa, bajo el pie de Starlight. */

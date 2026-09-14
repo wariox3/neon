@@ -20,7 +20,11 @@ export default function BarraPanel() {
 
   return (
     <header className="panel-barra">
-      <a className="panel-barra__marca" href="/app/">RedEDoc</a>
+      <a className="panel-barra__marca marca" href="/app/" translate="no">
+        <span className="marca__red">Red</span>
+        <span className="marca__e">E</span>
+        <span className="marca__doc">Doc</span>
+      </a>
       <nav className="panel-barra__enlaces">
         {ENLACES.map(({ href, texto }) => (
           <a

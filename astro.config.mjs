@@ -88,6 +88,10 @@ export default defineConfig({
       components: {
         SocialIcons: './src/components/EnlacePanel.astro',
         Footer: './src/components/PieDePagina.astro',
+        // El héroe de la portada, con el diagrama del flujo de emisión al lado.
+        Hero: './src/components/Heroe.astro',
+        // «RedEDoc» en la cabecera, con los colores del logo.
+        SiteTitle: './src/components/TituloSitio.astro',
       },
       lastUpdated: true,
       sidebar: [

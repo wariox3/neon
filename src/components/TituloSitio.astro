@@ -1,0 +1,37 @@
+---
+/**
+ * Sustituye al título del sitio de Starlight para pintar «RedEDoc» con los colores
+ * del logo: «Red», «E» y «Doc» por separado. El de Starlight lo pinta como un solo
+ * texto, y un color por tramo no se puede dar desde CSS.
+ *
+ * Los colores están en `custom.css` (`.marca`), porque el panel los comparte.
+ */
+const { siteTitleHref } = Astro.locals.starlightRoute;
+---
+
+<a href={siteTitleHref} class="site-title sl-flex">
+  <span class="marca" translate="no"
+    ><span class="marca__red">Red</span><span class="marca__e">E</span><span class="marca__doc"
+      >Doc</span
+    ></span
+  >
+</a>
+
+<style>
+  /* Lo mismo que el título original, en su misma capa. */
+  @layer starlight.core {
+    .site-title {
+      align-items: center;
+      gap: var(--sl-nav-gap);
+      font-size: var(--sl-text-h4);
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
+    .marca {
+      overflow: hidden;
+    }
+  }
+</style>

@@ -1,0 +1,211 @@
+---
+/**
+ * El recorrido de un documento, al lado del titular de la portada: tu sistema
+ * manda la venta, RedEDoc la arma y la firma, y la DIAN la valida.
+ *
+ * Todo sale de las variables de color del tema, así que se adapta solo al claro
+ * y al oscuro. Los iconos son decorativos; el texto de cada nodo basta.
+ */
+---
+
+<figure class="flujo">
+  <ol class="flujo__nodos" role="list">
+    <li>
+      <div class="flujo__nodo">
+        <span class="flujo__icono" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8"></path><path d="M12 16v4"></path></svg>
+        </span>
+        <span class="flujo__texto">
+          <strong>Tu sistema</strong>
+          <span>ERP, POS o desarrollo propio</span>
+        </span>
+      </div>
+      <p class="flujo__via">JSON + Api-Key</p>
+    </li>
+    <li>
+      <div class="flujo__nodo flujo__nodo--rededoc">
+        <div class="flujo__fila">
+          <span class="flujo__icono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"></path><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"></path><path d="m9 15 2 2 4-4"></path></svg>
+          </span>
+          <span class="flujo__texto">
+            <strong>RedEDoc</strong>
+            <span>Arma, firma y envía</span>
+          </span>
+        </div>
+        <ul class="flujo__piezas" role="list">
+          <li>XML UBL 2.1</li>
+          <li>CUFE / CUDE</li>
+          <li>firma</li>
+          <li>PDF con QR</li>
+        </ul>
+      </div>
+      <p class="flujo__via">Web Service DIAN</p>
+    </li>
+    <li>
+      <div class="flujo__nodo">
+        <span class="flujo__icono" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V10"></path><path d="M19 21V10"></path><path d="M9 21v-7"></path><path d="M15 21v-7"></path><path d="m2 10 10-6 10 6"></path></svg>
+        </span>
+        <span class="flujo__texto">
+          <strong>DIAN</strong>
+          <span>Valida el documento</span>
+        </span>
+        <span class="flujo__estado">aceptado</span>
+      </div>
+    </li>
+  </ol>
+  <figcaption>Tu sistema recibe de vuelta el XML firmado, el CUFE y el PDF.</figcaption>
+</figure>
+
+<style>
+  .flujo {
+    --flujo-exito: var(--marca-verde);
+    width: 100%;
+    max-width: 28rem;
+    margin: 0 auto;
+  }
+
+  /* El verde de marca no da contraste como texto sobre fondo claro. */
+  :global(:root[data-theme='light']) .flujo {
+    --flujo-exito: #0a7a52;
+  }
+
+  .flujo__nodos,
+  .flujo__piezas {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .flujo__nodo {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 1.125rem 1.25rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.5rem;
+    background: var(--sl-color-gray-6);
+    text-align: start;
+  }
+
+  .flujo__nodo--rededoc {
+    flex-direction: column;
+    align-items: stretch;
+    border-color: var(--marca-oceano);
+    background: var(--sl-color-accent-low);
+  }
+
+  .flujo__fila {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+  }
+
+  .flujo__icono {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.5rem;
+    background: var(--sl-color-black);
+    color: var(--sl-color-gray-2);
+  }
+
+  .flujo__icono svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .flujo__nodo--rededoc .flujo__icono {
+    background: var(--marca-oceano);
+    color: var(--marca-oxford);
+  }
+
+  .flujo__texto {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    line-height: 1.35;
+  }
+
+  .flujo__texto strong {
+    color: var(--sl-color-white);
+    font-size: var(--sl-text-base);
+  }
+
+  .flujo__texto span {
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-sm);
+  }
+
+  .flujo__nodo--rededoc .flujo__texto span {
+    color: var(--sl-color-gray-2);
+  }
+
+  .flujo__piezas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .flujo__piezas li {
+    padding: 0.25rem 0.5625rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.375rem;
+    background: var(--sl-color-black);
+    color: var(--sl-color-gray-1);
+    font-family: var(--__sl-font-mono);
+    /* A 12px las cuatro caben en una fila en escritorio; el `xs` de Starlight es 13px. */
+    font-size: 0.75rem;
+  }
+
+  .flujo__estado {
+    margin-inline-start: auto;
+    padding: 0.25rem 0.625rem;
+    border: 1px solid currentColor;
+    border-radius: 999rem;
+    color: var(--flujo-exito);
+    font-family: var(--__sl-font-mono);
+    font-size: var(--sl-text-xs);
+  }
+
+  /* El tramo entre dos nodos: una línea alineada con el centro de los iconos. */
+  .flujo__via {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    height: 3.5rem;
+    margin: 0;
+    padding-inline-start: calc(2.5rem - 1px);
+    color: var(--sl-color-gray-3);
+    font-family: var(--__sl-font-mono);
+    font-size: var(--sl-text-xs);
+  }
+
+  .flujo__via::before {
+    content: '';
+    align-self: stretch;
+    width: 2px;
+    background: var(--sl-color-gray-5);
+  }
+
+  figcaption {
+    margin-top: 1rem;
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-sm);
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  @media (min-width: 64rem) {
+    .flujo {
+      max-width: none;
+    }
+
+    figcaption {
+      text-align: start;
+    }
+  }
+</style>

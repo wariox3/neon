@@ -2,8 +2,8 @@
 title: RedEDoc
 description: Emite facturas electrónicas ante la DIAN desde tu propio sistema, por API y gratis. Factura de venta, notas crédito y débito, documento soporte y nómina electrónica.
 # Starlight compone el `<title>` como «título de la página | título del sitio», y aquí
-# los dos serían «RedEDoc». Lo sustituimos entero: el `title` de arriba se queda porque
-# es el `<h1>` del hero, y esto solo cambia lo que se ve en la pestaña y en Google.
+# los dos serían «RedEDoc». Lo sustituimos entero: el `title` de arriba se queda como
+# nombre de la página, y esto solo cambia lo que se ve en la pestaña y en Google.
 head:
   - tag: title
     content: API de facturación electrónica sin costo | RedEDoc
@@ -12,8 +12,15 @@ head:
       property: og:title
       content: API de facturación electrónica sin costo | RedEDoc
 template: splash
+# El héroe lo pinta `src/components/Heroe.astro`, que añade el diagrama del flujo.
+# `title` y `tagline` se pintan como HTML: de ahí el `<span>` y los dos párrafos.
 hero:
-  tagline: Envía tus documentos electrónicos a la DIAN desde el sistema que ya usas. Sin proveedores tecnológicos, por API y con la parte técnica resuelta.
+  title: 'Factura ante la DIAN desde tu sistema. <span class="destacado">Gratis.</span>'
+  tagline: >-
+    <p>Envía tus documentos electrónicos desde el sistema que ya usas. Sin proveedores
+    tecnológicos, por API y con la parte técnica resuelta.</p>
+    <p class="hero-apoyo"><a href="https://www.semantica.com.co" rel="noopener">Semántica
+    Digital S.A.S.</a> contribuye con la infraestructura para este proyecto.</p>
   actions:
     - text: Empezar
       link: /guias/empezar/
@@ -27,19 +34,14 @@ hero:
 
 import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-<div class="entradilla">
-Dos perfiles: **fabricantes de software ERP** que facturan para sus clientes, y **empresas
-con desarrollo propio** que facturan para sí mismas. En ambos casos el documento sale del
-sistema que ya usas, sin pagarle a un proveedor tecnológico.
-</div>
-
 ## Cómo funciona
 
 <ol class="pasos">
   <li>
     <strong>Te habilitas ante la DIAN</strong>
-    <p>Con tu certificado digital y tu resolución de facturación. Es la parte que sigue
-    siendo tuya, y la guía la lleva paso a paso.</p>
+    <p>Creas tu cuenta, creas el emisor y solicitas la habilitación con la
+    <a href="/guias/habilitacion-dian/">guía paso a paso</a>. Para eso necesitas tu
+    certificado digital y tu resolución de facturación.</p>
   </li>
   <li>
     <strong>Tu sistema manda la venta</strong>
@@ -73,6 +75,28 @@ sistema que ya usas, sin pagarle a un proveedor tecnológico.
     XSD oficiales y los identificadores verificados contra los ejemplos del Anexo.
   </Card>
 </CardGrid>
+
+## Sobre el servicio gratuito
+
+<div class="preguntas">
+  <div>
+    <h3>¿Qué cubre el servicio gratuito?</h3>
+    <p>Emisión, firma, validación ante la DIAN y almacenamiento de los documentos
+    electrónicos. La infraestructura de cómputo y almacenamiento la asume Semántica
+    Digital S.A.S.</p>
+  </div>
+  <div>
+    <h3>¿Qué debe aportar cada empresa emisora?</h3>
+    <p>Su certificado digital, expedido por una entidad de certificación acreditada, y su
+    habilitación ante la DIAN. Cada NIT requiere su propio certificado. Nosotros
+    acompañamos el proceso de habilitación sin costo.</p>
+  </div>
+  <div>
+    <h3>¿Quién es el titular ante la DIAN?</h3>
+    <p>Cada empresa emisora, en modalidad de software propio. Semántica Digital suministra
+    la plataforma.</p>
+  </div>
+</div>
 
 ## Por dónde seguir
 
