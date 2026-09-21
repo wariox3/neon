@@ -75,43 +75,85 @@ node -v    # v20.x
 
 Los repos de Ubuntu traen un Node demasiado viejo para Astro; por eso NodeSource.
 
-### 3. Código y carpetas
+**No sirve nvm.** nvm instala Node dentro del home de quien lo corre (`/root/.nvm/…`), y el
+usuario `neon` del paso 3 no lo ve: acaba usando el `/usr/bin/node` viejo de Ubuntu y la
+compilación falla con `SyntaxError: Unexpected token '.'`. Node tiene que estar en
+`/usr/bin`. Compruébalo con el usuario que compila:
 
 ```bash
-sudo mkdir -p /opt/neon
-sudo chown "$USER":"$USER" /opt/neon
-git clone https://github.com/wariox3/neon.git /opt/neon
-
-sudo mkdir -p /var/www/neon       # lo que nginx sirve
-sudo chown "$USER":www-data /var/www/neon
+sudo -u neon -H node -v    # v20.x (después de crear el usuario en el paso 3)
 ```
+
+### 3. Usuario `neon`
+
+El proyecto se clona, se compila y se publica con un usuario propio, no con el tuyo ni con
+root:
+
+```bash
+sudo adduser --system --group --home /var/lib/neon --shell /usr/sbin/nologin neon
+```
+
+- `--system`: sin contraseña y sin entrada en la pantalla de login.
+- `--shell /usr/sbin/nologin`: nadie puede entrar como `neon`, ni por SSH ni con `su`.
+- Sin sudo: no se añade a ningún grupo más.
+- `--home /var/lib/neon`: ahí guarda npm su caché (`~/.npm`), fuera del repo.
+
+Tú sigues entrando con tu usuario administrador y corres como `neon` solo lo que toca el
+proyecto, con `sudo -u neon -H`. Lo que se gana: `npm ci` ejecuta los scripts de
+instalación de cientos de paquetes, y si uno sale malicioso corre como `neon`. Puede
+estropear `/opt/neon` y `/var/www/neon`, pero no leer tus llaves, ni tocar la configuración
+de nginx, ni la de nobelio.
+
+Comprobar:
+
+```bash
+id neon                   # uid=…(neon) gid=…(neon) groups=…(neon)  — sin sudo
+sudo -u neon -H whoami    # neon
+```
+
+### 4. Código y carpetas
+
+```bash
+sudo mkdir -p /opt/neon /var/www/neon      # el repo, y lo que nginx sirve
+sudo chown neon:neon /opt/neon /var/www/neon
+sudo -u neon -H git clone https://github.com/wariox3/neon.git /opt/neon
+```
+
+nginx (`www-data`) no necesita pertenecer a ningún grupo: solo lee, y los archivos quedan
+legibles para todos (`755`/`644`). Lo que no puede es escribir, que es lo correcto.
 
 Se compila en `/opt/neon/dist` y se **copia** a `/var/www/neon`. Es a propósito:
 `astro build` borra `dist/` antes de escribirlo, y si nginx apuntara ahí el sitio quedaría
 en blanco durante la compilación.
 
-### 4. Compilar
+### 5. Compilar
 
 ```bash
 cd /opt/neon
-npm ci
-export PUBLIC_API_BASE=https://api.rededoc.co
-npm run build
-rsync -a --delete dist/ /var/www/neon/
+sudo -u neon -H npm ci
+sudo -u neon -H env PUBLIC_API_BASE=https://api.rededoc.co npm run build
+sudo -u neon -H rsync -a --delete dist/ /var/www/neon/
 ```
 
-`PUBLIC_API_BASE` se **exporta en el shell**, no en un `.env`: los dos lados leerían el
+Es lo mismo que hace el script de [Actualizar el sitio](#actualizar-el-sitio); en adelante
+basta con ese.
+
+`PUBLIC_API_BASE` se pasa **en el comando**, no en un `.env`: los dos lados leerían el
 `.env` sin problema, pero tenerla junto al resto del despliegue evita compilar sin ella por
-descuido. La referencia de la API no necesita variable propia: el esquema sale de esta
-misma (`$PUBLIC_API_BASE/api/schema/?format=json`), así que sitio, panel y referencia
-apuntan al mismo servicio por construcción.
+descuido. Ojo: un `export` en tu shell **no** llega, porque `sudo` limpia el entorno antes
+de cambiar de usuario; por eso va con `env`.
+
+La referencia de la API no necesita variable propia: el esquema sale de esta misma
+(`$PUBLIC_API_BASE/api/schema/?format=json`), así que sitio, panel y referencia apuntan al
+mismo servicio por construcción.
 
 > Si el servidor tiene 1 GB de RAM o menos, `astro build` puede quedarse sin memoria.
 > Alternativa: compilar en tu máquina o en CI y subir solo el resultado —
-> `rsync -a --delete dist/ usuario@servidor:/var/www/neon/`. El servidor entonces ni
+> `rsync -a --delete --rsync-path="sudo -u neon rsync" dist/ usuario@servidor:/var/www/neon/`
+> (entras con tu usuario, que tiene sudo, y escribe `neon`). El servidor entonces ni
 > siquiera necesita Node.
 
-### 5. nginx
+### 6. nginx
 
 `/etc/nginx/sites-available/neon`:
 
@@ -158,7 +200,7 @@ sudo nginx -t && sudo systemctl reload nginx
 No hace falta ninguna regla de reescritura ni *fallback* de SPA: todas las rutas del panel
 están precompiladas y su estado viaja en la query (`/app/emisores/formulario/?id=7`).
 
-### 6. HTTPS
+### 7. HTTPS
 
 Hay dos capas de TLS: la de Cloudflare hacia el visitante, y la del origen hacia
 Cloudflare. Las dos hacen falta.
@@ -228,7 +270,7 @@ exige del origen.
 > vale 15 años y no hay renovación que vigilar. Solo lo acepta Cloudflare, que es justo el
 > único que debería llegar al origen.
 
-### 7. nobelio (`api.rededoc.co`)
+### 8. nobelio (`api.rededoc.co`)
 
 El sitio es estático, pero la API es una aplicación Django que sí necesita un proceso.
 Puede vivir en este mismo servidor o en otro: lo único que importa es que `api` esté en la
@@ -251,7 +293,7 @@ server {
 ```
 
 Luego `sudo certbot --nginx -d api.rededoc.co`, con el mismo baile de apagar y encender el
-proxy del paso 6.
+proxy del paso 7.
 
 **Con Cloudflare delante, Django deja de ver al cliente real.** Todas las peticiones llegan
 con IP de Cloudflare, así que en nobelio hay que:
@@ -273,6 +315,11 @@ Lo único que se repite. En `/usr/local/bin/desplegar-neon` (fuera del repo, par
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Siempre como neon: si lo lanza otro usuario, se vuelve a ejecutar a sí mismo como neon.
+if [ "$(id -un)" != neon ]; then
+  exec sudo -u neon -H "$0" "$@"
+fi
+
 export PUBLIC_API_BASE=https://api.rededoc.co
 
 cd /opt/neon
@@ -283,10 +330,28 @@ rsync -a --delete dist/ /var/www/neon/
 echo "Listo: https://rededoc.co"
 ```
 
-`chmod +x` y ya. No hay que reiniciar nginx: sirve archivos, y los archivos cambiaron.
+```bash
+sudo chmod 755 /usr/local/bin/desplegar-neon    # de root: neon lo ejecuta, no lo edita
+desplegar-neon                                   # pide tu contraseña de sudo
+```
 
-**Rollback**: `git checkout <commit-anterior>` y volver a correrlo. No hay estado ni
-migraciones de este lado.
+No hay que reiniciar nginx: sirve archivos, y los archivos cambiaron.
+
+El script es de root a propósito: si `neon` pudiera editarlo, un paquete malicioso podría
+reescribirlo y esperar a que lo lances tú.
+
+**Rollback**: no hay estado ni migraciones de este lado; basta con compilar un commit
+anterior. El script no sirve para esto, porque su `git pull` falla fuera de una rama:
+
+```bash
+cd /opt/neon
+sudo -u neon -H git checkout <commit-anterior>
+sudo -u neon -H npm ci
+sudo -u neon -H env PUBLIC_API_BASE=https://api.rededoc.co npm run build
+sudo -u neon -H rsync -a --delete dist/ /var/www/neon/
+```
+
+Para volver a la normalidad, `sudo -u neon -H git checkout main` y `desplegar-neon`.
 
 ## Variables de entorno
 
