@@ -6,9 +6,9 @@
  * la DIAN.
  *
  * Lo que concede esa habilitación —certificado, software y resoluciones— va en
- * pestañas, porque son tres listas de otras tantas rutas de la API y enseñarlas
- * a la vez convertiría la ficha en un informe. Cada pestaña pide lo suyo cuando
- * se abre, no antes.
+ * pestañas, junto con los webhooks, porque son listas de otras tantas rutas de
+ * la API y enseñarlas a la vez convertiría la ficha en un informe. Cada pestaña
+ * pide lo suyo cuando se abre, no antes.
  *
  * La ubicación y las responsabilidades viajan por **código**, no por nombre, así
  * que aquí hay que resolverlas contra los catálogos. Mientras llegan —o si el
@@ -38,6 +38,7 @@ import {
   EntradaContrasena,
   ErrorGeneral,
   Marca,
+  Modal,
   Pestanas,
   Secreto,
   SesionNoLista,
@@ -75,6 +76,16 @@ interface Software {
   pin: string;
   test_set_id: string;
   set_pruebas_aceptado?: boolean;
+}
+
+interface Webhook {
+  id: number;
+  emisor: number;
+  nombre: string;
+  url: string;
+  estado_validado: boolean;
+  estado_notificado: boolean;
+  creado_en: string;
 }
 
 const TIPOS_SOFTWARE: Record<string, string> = {
@@ -191,17 +202,18 @@ const nombrePorCodigo = (items: Item[], codigo: string) =>
  * Va en multipart porque lleva el archivo, y con la clave del propio `.p12`: sin
  * ella el servidor no puede abrirlo ni validarlo. La clave no se guarda aquí ni
  * viaja a ningún otro sitio; se manda una vez y se borra del formulario en
- * cuanto la petición termina.
+ * cuanto la petición termina. Vive dentro de la ventana modal, que lo monta de
+ * cero cada vez que se abre: la clave tampoco sobrevive a un «Cancelar».
  */
-function CargarCertificado({ emisor, alCargar }: {
+function CargarCertificado({ emisor, alCargar, alCancelar }: {
   emisor: number;
   alCargar: () => void;
+  alCancelar: () => void;
 }) {
   const archivo = useRef<HTMLInputElement>(null);
   const [clave, setClave] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [cargado, setCargado] = useState(false);
 
   async function cargar(evento: SubmitEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -210,7 +222,6 @@ function CargarCertificado({ emisor, alCargar }: {
 
     setEnviando(true);
     setError(null);
-    setCargado(false);
 
     const cuerpo = new FormData();
     cuerpo.append('emisor', String(emisor));
@@ -219,13 +230,9 @@ function CargarCertificado({ emisor, alCargar }: {
 
     try {
       await api('/api/emisores/certificado/cargar/', { metodo: 'POST', cuerpo });
-      if (archivo.current) archivo.current.value = '';
-      setClave('');
-      setCargado(true);
       alCargar();
     } catch (fallo) {
       setError(fallo);
-    } finally {
       setEnviando(false);
     }
   }
@@ -238,7 +245,6 @@ function CargarCertificado({ emisor, alCargar }: {
         para cambiarlo hay que eliminar el que haya y cargar el nuevo.
       </p>
 
-      {cargado && <Aviso tipo="exito">Certificado cargado.</Aviso>}
       <ErrorGeneral error={error} />
 
       <div className="rejilla">
@@ -248,7 +254,14 @@ function CargarCertificado({ emisor, alCargar }: {
           error={errorDe(error, 'archivo')}
           ayuda="Un .p12 o .pfx."
         >
-          <input id="archivo" ref={archivo} type="file" required accept=".p12,.pfx" />
+          <input
+            id="archivo"
+            ref={archivo}
+            type="file"
+            required
+            autoFocus
+            accept=".p12,.pfx"
+          />
         </Campo>
 
         <Campo
@@ -267,6 +280,9 @@ function CargarCertificado({ emisor, alCargar }: {
       </div>
 
       <div className="acciones">
+        <button type="button" className="secundario" onClick={alCancelar}>
+          Cancelar
+        </button>
         <button type="submit" disabled={enviando}>
           {enviando ? 'Cargando…' : 'Cargar certificado'}
         </button>
@@ -278,16 +294,18 @@ function CargarCertificado({ emisor, alCargar }: {
 /**
  * Pestaña «Certificado»: el certificado de firma del emisor.
  *
- * El formulario de carga solo sale cuando no hay certificado. No es un adorno:
- * la API no tiene reemplazo —solo `cargar` y `destroy`—, así que dejar el
- * formulario a la vista con uno ya cargado invita a un intento que el servidor
- * rechaza. Para cambiarlo se elimina el actual desde la lista.
+ * La carga va en una ventana modal, y el botón que la abre solo sale cuando no
+ * hay certificado. No es un adorno: la API no tiene reemplazo —solo `cargar` y
+ * `destroy`—, así que ofrecer la carga con uno ya puesto invita a un intento que
+ * el servidor rechaza. Para cambiarlo se elimina el actual desde la lista.
  */
 function PestanaCertificado({ emisor }: { emisor: Emisor }) {
   const { items, error, recargar } = useDelEmisor<Certificado>(
     '/api/emisores/certificado/',
     emisor.id,
   );
+  const [abierta, setAbierta] = useState(false);
+  const [cargado, setCargado] = useState(false);
 
   // La lista es la que manda, porque es la que se recarga al cargar y al
   // eliminar; la bandera del emisor solo cubre el rato en que aún no ha
@@ -304,10 +322,48 @@ function PestanaCertificado({ emisor }: { emisor: Emisor }) {
           carga el nuevo.
         </p>
       ) : (
-        <CargarCertificado emisor={emisor.id} alCargar={recargar} />
+        <>
+          <p className="panel-guia">
+            Este emisor no tiene certificado: sin él no puede firmar, y tampoco registrar
+            software ante la DIAN.
+          </p>
+          <div className="acciones" style={{ marginTop: 0, marginBottom: '1rem' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setCargado(false);
+                setAbierta(true);
+              }}
+            >
+              Cargar certificado
+            </button>
+          </div>
+        </>
       )}
+
+      {cargado && <Aviso tipo="exito">Certificado cargado.</Aviso>}
+
+      <Modal titulo="Cargar certificado" abierta={abierta} alCerrar={() => setAbierta(false)}>
+        <CargarCertificado
+          emisor={emisor.id}
+          alCancelar={() => setAbierta(false)}
+          alCargar={() => {
+            setAbierta(false);
+            setCargado(true);
+            recargar();
+          }}
+        />
+      </Modal>
+
       <h3>Certificados del emisor</h3>
-      <ListaCertificados items={items} error={error} alEliminar={recargar} />
+      <ListaCertificados
+        items={items}
+        error={error}
+        alEliminar={() => {
+          setCargado(false);
+          recargar();
+        }}
+      />
     </>
   );
 }
@@ -414,16 +470,18 @@ type CamposSoftware = typeof SOFTWARE_VACIO;
  * proveedor tecnológico no se preguntan: vacíos, el servicio usa los del
  * despliegue (`DIAN_FABRICANTE_*`), que es lo que corresponde con software
  * propio.
+ *
+ * Vive dentro de la ventana modal, que lo monta de cero cada vez que se abre.
  */
-function CrearSoftware({ emisor, yaRegistrados, alCrear }: {
+function CrearSoftware({ emisor, yaRegistrados, alCrear, alCancelar }: {
   emisor: number;
   yaRegistrados: string[];
   alCrear: () => void;
+  alCancelar: () => void;
 }) {
   const [datos, setDatos] = useState(SOFTWARE_VACIO);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [creado, setCreado] = useState(false);
 
   function poner<C extends keyof CamposSoftware>(campo: C, valor: CamposSoftware[C]) {
     setDatos((previos) => ({ ...previos, [campo]: valor }));
@@ -433,18 +491,14 @@ function CrearSoftware({ emisor, yaRegistrados, alCrear }: {
     evento.preventDefault();
     setEnviando(true);
     setError(null);
-    setCreado(false);
     try {
       await api('/api/emisores/software/', {
         metodo: 'POST',
         cuerpo: { ...datos, emisor },
       });
-      setDatos(SOFTWARE_VACIO);
-      setCreado(true);
       alCrear();
     } catch (fallo) {
       setError(fallo);
-    } finally {
       setEnviando(false);
     }
   }
@@ -457,7 +511,6 @@ function CrearSoftware({ emisor, yaRegistrados, alCrear }: {
         rechazados. <a href="/guias/habilitacion-dian/">Cómo se obtienen</a>.
       </p>
 
-      {creado && <Aviso tipo="exito">Software registrado.</Aviso>}
       <ErrorGeneral error={error} />
 
       <div className="rejilla">
@@ -465,6 +518,7 @@ function CrearSoftware({ emisor, yaRegistrados, alCrear }: {
           <select
             id="tipo"
             required
+            autoFocus
             value={datos.tipo}
             onChange={(e) => poner('tipo', e.target.value)}
           >
@@ -540,6 +594,9 @@ function CrearSoftware({ emisor, yaRegistrados, alCrear }: {
       </div>
 
       <div className="acciones">
+        <button type="button" className="secundario" onClick={alCancelar}>
+          Cancelar
+        </button>
         <button type="submit" disabled={enviando}>
           {enviando ? 'Registrando…' : 'Registrar el software'}
         </button>
@@ -552,13 +609,16 @@ function CrearSoftware({ emisor, yaRegistrados, alCrear }: {
  * Pestaña «Software»: el software que la DIAN habilita, uno por operación.
  *
  * En ficha y no en tabla porque cada uno trae una docena de campos, y el PIN
- * arranca tapado: es una credencial, no un dato más.
+ * arranca tapado: es una credencial, no un dato más. El alta va en una ventana
+ * modal, como las demás pestañas.
  */
 function PestanaSoftware({ emisor }: { emisor: Emisor }) {
   const { items, error, recargar } = useDelEmisor<Software>(
     '/api/emisores/software/',
     emisor.id,
   );
+  const [abierta, setAbierta] = useState(false);
+  const [creado, setCreado] = useState(false);
 
   return (
     <>
@@ -566,17 +626,38 @@ function PestanaSoftware({ emisor }: { emisor: Emisor }) {
           certificado activo y vigente para registrar software, así que sin él el
           formulario solo daría un 400. */}
       {emisor.certificado_activo ? (
-        <CrearSoftware
-          emisor={emisor.id}
-          yaRegistrados={items?.map((software) => software.tipo) ?? []}
-          alCrear={recargar}
-        />
+        <div className="acciones" style={{ marginTop: 0, marginBottom: '1rem' }}>
+          <button
+            type="button"
+            onClick={() => {
+              setCreado(false);
+              setAbierta(true);
+            }}
+          >
+            Registrar software
+          </button>
+        </div>
       ) : (
         <p className="panel-guia">
           Para registrar software hace falta antes un certificado activo y vigente: es lo
           que firma la habilitación. Cárgalo en la pestaña «Certificado».
         </p>
       )}
+
+      {creado && <Aviso tipo="exito">Software registrado.</Aviso>}
+
+      <Modal titulo="Registrar software" abierta={abierta} alCerrar={() => setAbierta(false)}>
+        <CrearSoftware
+          emisor={emisor.id}
+          yaRegistrados={items?.map((software) => software.tipo) ?? []}
+          alCancelar={() => setAbierta(false)}
+          alCrear={() => {
+            setAbierta(false);
+            setCreado(true);
+            recargar();
+          }}
+        />
+      </Modal>
 
       <h3>Software del emisor</h3>
       <ListaSoftware items={items} error={error} />
@@ -614,6 +695,342 @@ function ListaSoftware({ items, error }: { items: Software[] | null; error: unkn
           </dl>
         </article>
       ))}
+    </>
+  );
+}
+
+/**
+ * Lo que el formulario de webhook manda.
+ *
+ * Los dos avisos arrancan marcados: un webhook sin ninguno no recibiría nada, y
+ * lo normal al darlo de alta es querer enterarse de todo. El `secreto` es
+ * opcional y de solo escritura: la API no lo devuelve nunca.
+ */
+const WEBHOOK_VACIO = {
+  nombre: '',
+  url: '',
+  estado_validado: true,
+  estado_notificado: true,
+  secreto: '',
+};
+
+type CamposWebhook = typeof WEBHOOK_VACIO;
+
+/**
+ * Alta o edición de un webhook, según llegue o no `webhook`. Vive dentro de la
+ * ventana modal, que lo monta de cero cada vez que se abre.
+ *
+ * El secreto no viene en la respuesta, así que al editar el campo arranca vacío
+ * y vacío significa «dejarlo como está». Para quitarlo hay una casilla aparte:
+ * mandar `secreto: ''` es lo que la API entiende como borrarlo, y no puede ser
+ * lo que pase por no tocar el campo.
+ */
+function FormularioWebhook({ emisor, webhook, alGuardar, alCancelar }: {
+  emisor: number;
+  webhook: Webhook | null;
+  alGuardar: () => void;
+  alCancelar: () => void;
+}) {
+  const [datos, setDatos] = useState<CamposWebhook>(
+    webhook
+      ? {
+          nombre: webhook.nombre,
+          url: webhook.url,
+          estado_validado: webhook.estado_validado,
+          estado_notificado: webhook.estado_notificado,
+          secreto: '',
+        }
+      : WEBHOOK_VACIO,
+  );
+  const [quitarSecreto, setQuitarSecreto] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+
+  function poner<C extends keyof CamposWebhook>(campo: C, valor: CamposWebhook[C]) {
+    setDatos((previos) => ({ ...previos, [campo]: valor }));
+  }
+
+  async function guardar(evento: SubmitEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    setEnviando(true);
+    setError(null);
+    // Un secreto vacío no se manda: vacío, la API lo entiende como «quitarlo».
+    const { secreto, ...resto } = datos;
+    const cuerpo = quitarSecreto
+      ? { ...resto, secreto: '' }
+      : { ...resto, ...(secreto ? { secreto } : {}) };
+    try {
+      if (webhook) {
+        await api(`/api/emisores/webhook/${webhook.id}/`, { metodo: 'PATCH', cuerpo });
+      } else {
+        await api('/api/emisores/webhook/', {
+          metodo: 'POST',
+          cuerpo: { ...cuerpo, emisor },
+        });
+      }
+      alGuardar();
+    } catch (fallo) {
+      setError(fallo);
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <form onSubmit={guardar}>
+      <p className="panel-guia">
+        Una URL de tu sistema a la que avisar de lo que pasa con los documentos de este
+        emisor. Solo HTTPS: el aviso lleva datos fiscales.
+      </p>
+
+      <ErrorGeneral error={error} />
+
+      <Campo
+        id="webhook-nombre"
+        etiqueta="Nombre"
+        error={errorDe(error, 'nombre')}
+        ayuda="Que se reconozca de un vistazo: “ERP producción”, “ERP pruebas”."
+      >
+        <input
+          id="webhook-nombre"
+          required
+          autoFocus
+          maxLength={150}
+          value={datos.nombre}
+          onChange={(e) => poner('nombre', e.target.value)}
+        />
+      </Campo>
+
+      <Campo id="webhook-url" etiqueta="URL" error={errorDe(error, 'url')}>
+        <input
+          id="webhook-url"
+          type="url"
+          required
+          maxLength={500}
+          placeholder="https://"
+          className="monospacio"
+          value={datos.url}
+          onChange={(e) => poner('url', e.target.value)}
+        />
+      </Campo>
+
+      {!quitarSecreto && (
+        <Campo
+          id="webhook-secreto"
+          etiqueta={webhook ? 'Secreto nuevo (opcional)' : 'Secreto (opcional)'}
+          error={errorDe(error, 'secreto')}
+          ayuda={
+            webhook
+              ? 'Vacío deja el que haya. El actual no se puede ver: solo reemplazar o quitar.'
+              : 'Con él se firman los avisos, para que tu sistema compruebe que salen de aquí. No se vuelve a mostrar.'
+          }
+        >
+          <EntradaContrasena
+            id="webhook-secreto"
+            autoComplete="off"
+            requerido={false}
+            maxLength={255}
+            valor={datos.secreto}
+            onCambio={(valor) => poner('secreto', valor)}
+          />
+        </Campo>
+      )}
+
+      {webhook && (
+        <label className="casilla" style={{ marginBottom: '1rem' }}>
+          <input
+            type="checkbox"
+            checked={quitarSecreto}
+            onChange={(e) => setQuitarSecreto(e.target.checked)}
+          />
+          Quitar el secreto: los avisos saldrán sin firmar
+        </label>
+      )}
+
+      <fieldset className="casillas-avisos">
+        <legend>Avisar de</legend>
+        <label className="casilla">
+          <input
+            type="checkbox"
+            checked={datos.estado_validado}
+            onChange={(e) => poner('estado_validado', e.target.checked)}
+          />
+          La validación de la DIAN
+        </label>
+        <label className="casilla">
+          <input
+            type="checkbox"
+            checked={datos.estado_notificado}
+            onChange={(e) => poner('estado_notificado', e.target.checked)}
+          />
+          La notificación al adquiriente
+        </label>
+      </fieldset>
+
+      <div className="acciones">
+        <button type="button" className="secundario" onClick={alCancelar}>
+          Cancelar
+        </button>
+        <button type="submit" disabled={enviando}>
+          {enviando
+            ? 'Guardando…'
+            : webhook ? 'Guardar los cambios' : 'Crear el webhook'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * Pestaña «Webhooks»: las URL a las que se avisa de lo que pasa con los
+ * documentos. El alta y la edición van en una ventana modal para no empujar la
+ * lista hacia abajo con un formulario que se usa pocas veces.
+ */
+function PestanaWebhooks({ emisor }: { emisor: Emisor }) {
+  // Esta ruta sí filtra por emisor, así que no hace falta recorrer las páginas
+  // de los demás; el filtro de `delEmisor` queda de más, pero no estorba.
+  const { items, error, recargar } = useDelEmisor<Webhook>(
+    `/api/emisores/webhook/?emisor=${emisor.id}`,
+    emisor.id,
+  );
+  // `null`: cerrada. `'nuevo'`: alta. Un webhook: su edición.
+  const [editando, setEditando] = useState<Webhook | 'nuevo' | null>(null);
+  const [hecho, setHecho] = useState<string | null>(null);
+
+  function abrir(cual: Webhook | 'nuevo') {
+    setHecho(null);
+    setEditando(cual);
+  }
+
+  const webhook = editando === 'nuevo' ? null : editando;
+
+  return (
+    <>
+      <div className="acciones" style={{ marginTop: 0, marginBottom: '1rem' }}>
+        <button type="button" onClick={() => abrir('nuevo')}>
+          Nuevo webhook
+        </button>
+      </div>
+
+      {hecho && <Aviso tipo="exito">{hecho}</Aviso>}
+
+      <Modal
+        titulo={webhook ? `Editar «${webhook.nombre}»` : 'Nuevo webhook'}
+        abierta={editando !== null}
+        alCerrar={() => setEditando(null)}
+      >
+        <FormularioWebhook
+          emisor={emisor.id}
+          webhook={webhook}
+          alCancelar={() => setEditando(null)}
+          alGuardar={() => {
+            setEditando(null);
+            setHecho(webhook ? 'Webhook actualizado.' : 'Webhook creado.');
+            recargar();
+          }}
+        />
+      </Modal>
+
+      <ListaWebhooks
+        items={items}
+        error={error}
+        alEditar={abrir}
+        alEliminar={() => {
+          setHecho('Webhook eliminado.');
+          recargar();
+        }}
+      />
+    </>
+  );
+}
+
+function ListaWebhooks({ items, error, alEditar, alEliminar }: {
+  items: Webhook[] | null;
+  error: unknown;
+  alEditar: (webhook: Webhook) => void;
+  alEliminar: () => void;
+}) {
+  // Como en los certificados: el fallo de la baja va aparte del de la lista.
+  const [errorBaja, setErrorBaja] = useState<unknown>(null);
+  const [borrando, setBorrando] = useState<number | null>(null);
+
+  if (error) return <ErrorGeneral error={error} />;
+  if (items === null) return <Cargando />;
+  if (items.length === 0) {
+    return <p className="vacio">Este emisor no tiene ningún webhook.</p>;
+  }
+
+  async function eliminar(webhook: Webhook) {
+    const seguro = window.confirm(
+      `Eliminar el webhook "${webhook.nombre}". ${webhook.url} dejará de recibir ` +
+        'avisos, y no se puede recuperar. ¿Seguimos?',
+    );
+    if (!seguro) return;
+    setErrorBaja(null);
+    setBorrando(webhook.id);
+    try {
+      await api(`/api/emisores/webhook/${webhook.id}/`, { metodo: 'DELETE' });
+      alEliminar();
+    } catch (fallo) {
+      setErrorBaja(fallo);
+    } finally {
+      setBorrando(null);
+    }
+  }
+
+  return (
+    <>
+      <ErrorGeneral error={errorBaja} />
+      <div className="tabla-contenedor">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>URL</th>
+              <th>Validación</th>
+              <th>Notificación</th>
+              <th>Creado</th>
+              <th aria-label="Acciones" />
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((webhook) => (
+              <tr key={webhook.id}>
+                <td>{webhook.nombre}</td>
+                <td className="monospacio">{webhook.url}</td>
+                <td><Marca valor={webhook.estado_validado} /></td>
+                <td><Marca valor={webhook.estado_notificado} /></td>
+                <td>
+                  {new Date(webhook.creado_en).toLocaleDateString('es-CO', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </td>
+                <td>
+                  <div className="acciones" style={{ margin: 0, flexWrap: 'nowrap' }}>
+                    <button
+                      type="button"
+                      className="secundario"
+                      disabled={borrando !== null}
+                      onClick={() => alEditar(webhook)}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="peligro"
+                      disabled={borrando !== null}
+                      onClick={() => void eliminar(webhook)}
+                    >
+                      {borrando === webhook.id ? 'Eliminando…' : 'Eliminar'}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }
@@ -875,7 +1292,7 @@ export default function EmisorDetalle() {
 
       <Pestanas
         nombre="emisor"
-        etiqueta="Certificado, software y resoluciones"
+        etiqueta="Certificado, software, resoluciones y webhooks"
         pestanas={[
           {
             id: 'certificado',
@@ -896,6 +1313,11 @@ export default function EmisorDetalle() {
                 tiposFactura={tiposFactura}
               />
             ),
+          },
+          {
+            id: 'webhooks',
+            titulo: 'Webhooks',
+            render: () => <PestanaWebhooks emisor={emisor} />,
           },
         ]}
       />

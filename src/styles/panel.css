@@ -281,6 +281,11 @@ button.peligro {
   border-left-color: var(--panel-exito);
 }
 
+.aviso__lista {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
 .aviso p:first-child {
   margin-top: 0;
 }
@@ -543,6 +548,67 @@ thead abbr[title] {
 [role='tabpanel']:focus-visible {
   outline: 2px solid var(--sl-color-accent-high);
   outline-offset: 0.5rem;
+}
+
+/* --- Ventana modal ------------------------------------------------------ */
+
+.modal {
+  width: min(36rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  padding: 0;
+  border: 1px solid var(--panel-borde);
+  border-radius: var(--panel-radio);
+  background: var(--sl-color-black);
+  color: var(--sl-color-white);
+}
+
+.modal::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
+
+.modal__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--panel-borde);
+}
+
+.modal__cabecera h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.modal__cabecera button {
+  padding: 0.1rem 0.6rem;
+  font-size: 1.25rem;
+  line-height: 1.4;
+}
+
+.modal__cuerpo {
+  padding: 1.25rem;
+}
+
+/* Un grupo corto de casillas, sin el marco del navegador. */
+.casillas-avisos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 0;
+}
+
+.casillas-avisos legend {
+  padding: 0;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.modal__cuerpo .acciones {
+  justify-content: flex-end;
 }
 
 /* --- Fichas de solo lectura ---------------------------------------------- */

@@ -21,16 +21,28 @@ export const RUTA_INGRESO = '/app/ingresar/';
 /** Errores por campo, tal y como los pinta un formulario. */
 export type ErroresPorCampo = Record<string, string[]>;
 
+/** Un elemento de la lista `errores` de la API. */
+export interface ErrorDeLista {
+  codigo: string;
+  mensaje: string;
+}
+
 /**
  * Un 4xx/5xx de la API.
  *
- * nobelio normaliza todos sus errores a `{"detail": ..., "errores": {...}}`
+ * nobelio normaliza todos sus errores a
+ * `{"detail": "...", "errores": [{"codigo": "...", "mensaje": "..."}]}`
  * (`apps.nucleo.api.exception_handler`), así que el cliente puede contar con esa
- * forma y no adivinar dónde está el mensaje.
+ * forma y no adivinar dónde está el mensaje. Cuando el fallo es de un campo, el
+ * mensaje llega con la ruta delante —`url: Tiene que ser…`,
+ * `responsabilidades[0]: …`—, y de ahí sale `errores`, el mapa por campo que
+ * pintan los formularios.
  */
 export class ErrorApi extends Error {
   estado: number;
   errores: ErroresPorCampo;
+  /** La lista tal cual la manda la API, para enseñarla entera. */
+  lista: ErrorDeLista[];
   /** Segundos que faltan para poder reintentar. Solo en un 429. */
   segundosDeEspera?: number;
 
@@ -39,11 +51,13 @@ export class ErrorApi extends Error {
     detalle: string,
     errores: ErroresPorCampo = {},
     segundosDeEspera?: number,
+    lista: ErrorDeLista[] = [],
   ) {
     super(detalle);
     this.name = 'ErrorApi';
     this.estado = estado;
     this.errores = errores;
+    this.lista = lista;
     this.segundosDeEspera = segundosDeEspera;
   }
 
@@ -92,13 +106,41 @@ function esperaDe(respuesta: Response, detalle: string): number | undefined {
   return enElMensaje ? Number(enElMensaje[1]) : undefined;
 }
 
+/** Ruta de campo al principio de un mensaje: `url: `, `lineas[0].valor: `. */
+const RUTA_DE_CAMPO = /^([A-Za-z_]\w*(?:\[\d+\]|\.\w+)*): (.+)$/s;
+
+/**
+ * El mapa por campo a partir de la lista de la API.
+ *
+ * Cada error queda bajo su ruta completa y, además, bajo el campo de arriba
+ * (`responsabilidades[0]` también en `responsabilidades`), que es el que tiene
+ * un control en el formulario.
+ */
+function porCampo(lista: ErrorDeLista[]): ErroresPorCampo {
+  const errores: ErroresPorCampo = {};
+  for (const { mensaje } of lista) {
+    const partes = RUTA_DE_CAMPO.exec(mensaje);
+    if (!partes) continue;
+    const [, ruta, texto] = partes;
+    const raiz = ruta.split(/[.[]/)[0];
+    for (const clave of new Set([ruta, raiz])) (errores[clave] ??= []).push(texto);
+  }
+  return errores;
+}
+
 async function cuerpoDeError(respuesta: Response): Promise<ErrorApi> {
   let detalle = `La API respondió ${respuesta.status}.`;
   let errores: ErroresPorCampo = {};
+  let lista: ErrorDeLista[] = [];
   try {
     const datos = await respuesta.json();
     if (typeof datos?.detail === 'string') detalle = datos.detail;
-    if (datos?.errores && typeof datos.errores === 'object') {
+    if (Array.isArray(datos?.errores)) {
+      lista = (datos.errores as unknown[])
+        .filter((e): e is ErrorDeLista => typeof (e as ErrorDeLista)?.mensaje === 'string')
+        .map((e) => ({ codigo: String(e.codigo ?? ''), mensaje: e.mensaje }));
+      errores = porCampo(lista);
+    } else if (datos?.errores && typeof datos.errores === 'object') {
       errores = datos.errores as ErroresPorCampo;
     } else if (datos && typeof datos === 'object' && !('detail' in datos)) {
       // Un serializer que falla antes del handler devuelve los campos sueltos.
@@ -109,7 +151,13 @@ async function cuerpoDeError(respuesta: Response): Promise<ErrorApi> {
   } catch {
     // Sin cuerpo JSON (502 de un proxy, corte de red): se queda el genérico.
   }
-  return new ErrorApi(respuesta.status, detalle, errores, esperaDe(respuesta, detalle));
+  return new ErrorApi(
+    respuesta.status,
+    detalle,
+    errores,
+    esperaDe(respuesta, detalle),
+    lista,
+  );
 }
 
 let refrescoEnVuelo: Promise<boolean> | null = null;

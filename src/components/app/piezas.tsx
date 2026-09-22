@@ -1,5 +1,5 @@
 /** Piezas que se repiten en todas las pantallas del panel. */
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 
 import { ErrorApi } from '../../lib/api';
 import type { Sesion } from '../../lib/sesion';
@@ -19,15 +19,31 @@ export function Aviso({ children, tipo = 'error' }: {
 /**
  * El error de una operación, en prosa.
  *
- * Los errores por campo los pinta cada campo; aquí queda el `detail`, que es lo
- * que explica un 401, un 403 o un fallo de red.
+ * Siempre va el `detail`, que es lo que explica un 401, un 403 o un fallo de
+ * red. En un 400 va además la lista de `errores` de la API: los de campo los
+ * pinta también cada campo, pero no todos los campos tienen control en el
+ * formulario, y un error que no se ve no se puede corregir. Se salta el que
+ * repite el `detail`, que es lo que pasa cuando el error es uno solo.
  */
 export function ErrorGeneral({ error }: { error: unknown }) {
   if (!error) return null;
-  const mensaje = error instanceof ErrorApi
-    ? error.message
-    : 'No se pudo conectar con el servicio. Revisa tu conexión e inténtalo de nuevo.';
-  return <Aviso>{mensaje}</Aviso>;
+  if (!(error instanceof ErrorApi)) {
+    return (
+      <Aviso>No se pudo conectar con el servicio. Revisa tu conexión e inténtalo de nuevo.</Aviso>
+    );
+  }
+  const lista = error.estado === 400
+    ? error.lista.filter((item) => item.mensaje !== error.message)
+    : [];
+  if (lista.length === 0) return <Aviso>{error.message}</Aviso>;
+  return (
+    <Aviso>
+      <p>{error.message}</p>
+      <ul className="aviso__lista">
+        {lista.map((item, indice) => <li key={indice}>{item.mensaje}</li>)}
+      </ul>
+    </Aviso>
+  );
 }
 
 interface CampoProps {
@@ -150,6 +166,51 @@ export function Secreto({ valor }: { valor: string }) {
   );
 }
 
+/**
+ * Ventana modal, sobre el `<dialog>` del navegador.
+ *
+ * `showModal()` trae de serie lo que a mano cuesta: el foco atrapado dentro,
+ * Escape para cerrar y el resto de la página inerte. Quien la usa decide si está
+ * abierta; el cierre que hace el navegador por su cuenta (Escape) llega por
+ * `alCerrar`.
+ *
+ * El contenido solo se monta mientras está abierta, para que cada vez arranque
+ * de cero y no con lo que se dejó a medias la anterior. Por lo mismo, un clic
+ * fuera no la cierra: se perdería lo tecleado por un descuido.
+ */
+export function Modal({ abierta, titulo, alCerrar, children }: {
+  abierta: boolean;
+  titulo: string;
+  alCerrar: () => void;
+  children: ReactNode;
+}) {
+  const dialogo = useRef<HTMLDialogElement>(null);
+  const idTitulo = useId();
+
+  useEffect(() => {
+    const actual = dialogo.current;
+    if (!actual) return;
+    if (abierta && !actual.open) actual.showModal();
+    else if (!abierta && actual.open) actual.close();
+  }, [abierta]);
+
+  return (
+    <dialog ref={dialogo} className="modal" aria-labelledby={idTitulo} onClose={alCerrar}>
+      {abierta && (
+        <>
+          <div className="modal__cabecera">
+            <h2 id={idTitulo}>{titulo}</h2>
+            <button type="button" className="secundario" aria-label="Cerrar" onClick={alCerrar}>
+              ×
+            </button>
+          </div>
+          <div className="modal__cuerpo">{children}</div>
+        </>
+      )}
+    </dialog>
+  );
+}
+
 export function Cargando({ que = 'Cargando…' }: { que?: string }) {
   return <p className="vacio">{que}</p>;
 }
@@ -203,6 +264,8 @@ export function EntradaContrasena({
   onCambio,
   autoComplete,
   autoFocus = false,
+  requerido = true,
+  maxLength,
   name,
 }: {
   id: string;
@@ -210,6 +273,8 @@ export function EntradaContrasena({
   onCambio: (valor: string) => void;
   autoComplete: 'current-password' | 'new-password' | 'off';
   autoFocus?: boolean;
+  requerido?: boolean;
+  maxLength?: number;
   name?: string;
 }) {
   const [visible, setVisible] = useState(false);
@@ -222,7 +287,8 @@ export function EntradaContrasena({
         type={visible ? 'text' : 'password'}
         autoComplete={autoComplete}
         autoFocus={autoFocus}
-        required
+        required={requerido}
+        maxLength={maxLength}
         value={valor}
         onChange={(e) => onCambio(e.target.value)}
       />
