@@ -88,6 +88,23 @@ interface Webhook {
   creado_en: string;
 }
 
+/** Lo que devuelve `/webhook/{id}/probar/`: 200 aunque el receptor falle. */
+interface PruebaWebhook {
+  entregado: boolean;
+  codigo_http: number | null;
+  detalle: string;
+  duracion_ms: number;
+}
+
+/**
+ * La causa habitual de cada fallo de la prueba, según la API. Lo que no está
+ * aquí se queda con el `detalle` que devuelve el receptor.
+ */
+const PISTAS_PRUEBA: Record<number, string> = {
+  401: 'El receptor rechazó la firma: el secreto no coincide o su reloj está desfasado.',
+  404: 'El receptor no conoce la referencia externa de este emisor.',
+};
+
 const TIPOS_SOFTWARE: Record<string, string> = {
   facturacion: 'Facturación electrónica',
   nomina: 'Nómina electrónica',
@@ -949,9 +966,14 @@ function ListaWebhooks({ items, error, alEditar, alEliminar }: {
   alEditar: (webhook: Webhook) => void;
   alEliminar: () => void;
 }) {
-  // Como en los certificados: el fallo de la baja va aparte del de la lista.
-  const [errorBaja, setErrorBaja] = useState<unknown>(null);
+  // Como en los certificados: el fallo de una acción va aparte del de la lista.
+  const [errorAccion, setErrorAccion] = useState<unknown>(null);
   const [borrando, setBorrando] = useState<number | null>(null);
+  const [probando, setProbando] = useState<number | null>(null);
+  const [prueba, setPrueba] = useState<{ webhook: Webhook; resultado: PruebaWebhook } | null>(
+    null,
+  );
+  const ocupado = borrando !== null || probando !== null;
 
   if (error) return <ErrorGeneral error={error} />;
   if (items === null) return <Cargando />;
@@ -965,21 +987,42 @@ function ListaWebhooks({ items, error, alEditar, alEliminar }: {
         'avisos, y no se puede recuperar. ¿Seguimos?',
     );
     if (!seguro) return;
-    setErrorBaja(null);
+    setErrorAccion(null);
+    setPrueba(null);
     setBorrando(webhook.id);
     try {
       await api(`/api/emisores/webhook/${webhook.id}/`, { metodo: 'DELETE' });
       alEliminar();
     } catch (fallo) {
-      setErrorBaja(fallo);
+      setErrorAccion(fallo);
     } finally {
       setBorrando(null);
     }
   }
 
+  // Un 400 (sin secreto, o emisor sin referencia externa) no llega a mandar
+  // nada y sale como error; lo que respondió el receptor, en `prueba`.
+  async function probar(webhook: Webhook) {
+    setErrorAccion(null);
+    setPrueba(null);
+    setProbando(webhook.id);
+    try {
+      const resultado = await api<PruebaWebhook>(
+        `/api/emisores/webhook/${webhook.id}/probar/`,
+        { metodo: 'POST' },
+      );
+      setPrueba({ webhook, resultado });
+    } catch (fallo) {
+      setErrorAccion(fallo);
+    } finally {
+      setProbando(null);
+    }
+  }
+
   return (
     <>
-      <ErrorGeneral error={errorBaja} />
+      <ErrorGeneral error={errorAccion} />
+      {prueba && <ResultadoPrueba {...prueba} />}
       <div className="tabla-contenedor">
         <table>
           <thead>
@@ -1011,7 +1054,15 @@ function ListaWebhooks({ items, error, alEditar, alEliminar }: {
                     <button
                       type="button"
                       className="secundario"
-                      disabled={borrando !== null}
+                      disabled={ocupado}
+                      onClick={() => void probar(webhook)}
+                    >
+                      {probando === webhook.id ? 'Probando…' : 'Probar'}
+                    </button>
+                    <button
+                      type="button"
+                      className="secundario"
+                      disabled={ocupado}
                       onClick={() => alEditar(webhook)}
                     >
                       Editar
@@ -1019,7 +1070,7 @@ function ListaWebhooks({ items, error, alEditar, alEliminar }: {
                     <button
                       type="button"
                       className="peligro"
-                      disabled={borrando !== null}
+                      disabled={ocupado}
                       onClick={() => void eliminar(webhook)}
                     >
                       {borrando === webhook.id ? 'Eliminando…' : 'Eliminar'}
@@ -1032,6 +1083,32 @@ function ListaWebhooks({ items, error, alEditar, alEliminar }: {
         </table>
       </div>
     </>
+  );
+}
+
+function ResultadoPrueba({ webhook, resultado }: {
+  webhook: Webhook;
+  resultado: PruebaWebhook;
+}) {
+  const { entregado, codigo_http, detalle, duracion_ms } = resultado;
+  if (entregado) {
+    return (
+      <Aviso tipo="exito">
+        «{webhook.nombre}» recibió el aviso de prueba ({codigo_http}, {duracion_ms} ms).
+      </Aviso>
+    );
+  }
+  const pista =
+    codigo_http === null
+      ? 'La URL no respondió.'
+      : PISTAS_PRUEBA[codigo_http] ?? `El receptor respondió ${codigo_http}.`;
+  return (
+    <Aviso>
+      <p>
+        «{webhook.nombre}» no aceptó el aviso de prueba. {pista}
+      </p>
+      {detalle && <p className="monospacio">{detalle}</p>}
+    </Aviso>
   );
 }
 
