@@ -1286,6 +1286,9 @@ export default function EmisorDetalle() {
 
       <h2>Identificación</h2>
       <dl className="datos">
+        <Dato etiqueta="ID del emisor">
+          <span className="monospacio">{emisor.id}</span>
+        </Dato>
         <Dato etiqueta="Tipo de identificación">
           {nombrePorId(tiposIdentificacion, emisor.tipo_identificacion)}
         </Dato>
