@@ -59,19 +59,18 @@ sesión en cookie— y para cómo funciona el alcance.
 
 ## 2. Mirar los catálogos
 
-Varios campos del emisor y del documento se envían como **id de una fila de catálogo**
-(tipo de identificación, tributo, unidad de medida, moneda…). Los catálogos son de solo
-lectura y se consultan con la misma credencial:
+Varios campos del emisor y del documento se envían como **valor de un catálogo DIAN**
+(tipo de identificación, tributo, unidad de medida, moneda…). Están todos en
+[Catálogos DIAN](/catalogos/), con qué campos los usan y para descargar en JSON o CSV.
+
+En la API son de solo lectura y públicos: no piden credencial.
 
 ```bash
-curl -H "Authorization: Api-Key $API_KEY" \
-  "https://api.rededoc.co/api/catalogos/tipo-identificacion/"
+curl "https://api.rededoc.co/api/catalogos/tipo-identificacion/"
 
-curl -H "Authorization: Api-Key $API_KEY" \
-  "https://api.rededoc.co/api/catalogos/tributo/?search=IVA"
+curl "https://api.rededoc.co/api/catalogos/tributo/?search=IVA"
 
-curl -H "Authorization: Api-Key $API_KEY" \
-  "https://api.rededoc.co/api/catalogos/municipio/?search=Medell"
+curl "https://api.rededoc.co/api/catalogos/municipio/?search=Medell"
 ```
 
 :::caution[Los ids no son portables]

@@ -5,10 +5,10 @@
  * cargar antes de tener sesión. Se cachean en memoria porque el formulario los
  * pide varias veces y no cambian durante una visita.
  *
- * Hay dos formas de usarlos, y la elige el tamaño del catálogo. La API pagina de
- * diez en diez y no admite `page_size`, así que traerse entero uno grande
- * costaría cien peticiones: los municipios (más de mil) y los países se resuelven
- * **buscando**, no desplegando.
+ * Hay dos formas de usarlos, y la elige el tamaño del catálogo. Los cortos se
+ * traen enteros de una vez con `exportar/`, que no pagina. Los grandes —los
+ * municipios pasan de mil, los países de doscientos— no caben en un `<select>`:
+ * se resuelven **buscando**, no desplegando.
  */
 import { type Pagina, api } from './api';
 
@@ -26,19 +26,10 @@ export interface Municipio extends Item {
   codigo_postal?: string;
 }
 
-/** Tope de páginas de `catalogo()`. Ver el comentario de arriba. */
-const MAXIMO_PAGINAS = 8;
-
 const cache = new Map<string, Promise<Item[]>>();
 
 async function todas(nombre: string): Promise<Item[]> {
-  const items: Item[] = [];
-  let siguiente: string | null = `/api/catalogos/${nombre}/`;
-  for (let pagina = 0; siguiente && pagina < MAXIMO_PAGINAS; pagina += 1) {
-    const respuesta: Pagina<Item> = await api<Pagina<Item>>(siguiente);
-    items.push(...respuesta.results);
-    siguiente = respuesta.next;
-  }
+  const items = await api<Item[]>(`/api/catalogos/${nombre}/exportar/`);
   return items.filter((item) => item.activo !== false);
 }
 

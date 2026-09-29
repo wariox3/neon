@@ -197,13 +197,27 @@ function propiedadesDeContexto(esquema, nodo, contexto) {
   });
 }
 
+/**
+ * Enlace a la página del catálogo cuando el campo recibe uno. El esquema lo
+ * marca con `x-catalogo` (el nombre) y `x-catalogo-valor` (`id` o `codigo`), en
+ * el propio campo o, si es una lista, en sus elementos. Las páginas las escribe
+ * `generar-catalogos.mjs`.
+ */
+function notaDeCatalogo(esquema, prop) {
+  const marcado = prop['x-catalogo'] ? prop : resolverRef(esquema, prop.items);
+  const catalogo = marcado?.['x-catalogo'];
+  if (!catalogo) return '';
+  const valor = marcado['x-catalogo-valor'] ?? 'id';
+  return `Valor del catálogo [\`${catalogo}\`](/catalogos/${catalogo}/): se envía el \`${valor}\`.`;
+}
+
 /** Filas `nombre · tipo · obligatorio · descripción` de las propiedades de un objeto. */
 function filasDePropiedades(esquema, nodo, contexto) {
   const s = resolverRef(esquema, nodo);
   const obligatorias = new Set(s.required ?? []);
   return propiedadesDeContexto(esquema, nodo, contexto).map(([nombre, prop]) => {
     const resuelta = resolverRef(esquema, prop);
-    const notas = [resuelta.description];
+    const notas = [resuelta.description, notaDeCatalogo(esquema, resuelta)];
     if (resuelta.readOnly) notas.push('Solo lectura.');
     if (resuelta.nullable) notas.push('Admite `null`.');
     return {

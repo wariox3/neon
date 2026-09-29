@@ -29,7 +29,7 @@ recupera: se crea otra.
 export API_KEY='<prefijo>.<secreto>'
 
 curl -H "Authorization: Api-Key $API_KEY" \
-  https://api.rededoc.co/api/catalogos/tributo/
+  https://api.rededoc.co/api/emisores/emisor/
 ```
 
 Esta vía es **stateless**: no usa cookies ni sesión, y cada petición se identifica sola.

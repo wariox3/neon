@@ -6,9 +6,11 @@ dist/
 .astro/
 .output/
 
-# Esquema OpenAPI descargado y referencia generada: son artefactos de compilación
+# Esquema OpenAPI y catálogos descargados, y las páginas que salen de ellos: son
+# artefactos de compilación
 openapi/.cache/
 src/content/docs/api/
+src/content/docs/catalogos/
 src/generated/
 
 # Entorno local

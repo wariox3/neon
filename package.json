@@ -9,9 +9,11 @@
   },
   "scripts": {
     "referencia": "node scripts/generar-referencia.mjs",
-    "predev": "npm run referencia",
+    "catalogos": "node scripts/generar-catalogos.mjs",
+    "generar": "npm run referencia && npm run catalogos",
+    "predev": "npm run generar",
     "dev": "astro dev",
-    "prebuild": "npm run referencia",
+    "prebuild": "npm run generar",
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",

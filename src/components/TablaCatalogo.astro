@@ -1,0 +1,188 @@
+---
+/**
+ * Tabla de un catálogo DIAN, con un filtro que no sale del navegador.
+ *
+ * Las filas van enteras en el HTML: el catálogo más grande (municipios) ronda
+ * las 1.100, que para una página estática es poco, y así se leen sin
+ * JavaScript y las encuentra el buscador. El filtro solo esconde filas; cada
+ * una lleva en `data-texto` lo que se busca, ya en minúsculas y sin tildes.
+ */
+import { columnasDe, filasDe } from '../lib/catalogos-generados';
+
+interface Props {
+  nombre: string;
+}
+
+const { nombre } = Astro.props;
+const filas = filasDe(nombre);
+const columnas = columnasDe(filas);
+
+const ETIQUETAS: Record<string, string> = {
+  id: 'id',
+  codigo: 'Código',
+  nombre: 'Nombre',
+  activo: 'Activo',
+  codigo_postal: 'Código postal',
+  departamento: 'id departamento',
+  departamento_codigo: 'Código departamento',
+};
+
+const etiqueta = (columna: string) =>
+  ETIQUETAS[columna] ?? columna.charAt(0).toUpperCase() + columna.slice(1).replace(/_/g, ' ');
+
+/** Columnas de identificadores: en monoespaciado, como en el resto de la documentación. */
+const esCodigo = (columna: string) => columna === 'id' || /codigo|^departamento$/.test(columna);
+
+const normalizar = (texto: string) =>
+  texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+const mostrar = (valor: unknown) =>
+  valor === true ? 'sí' : valor === false ? 'no' : valor === null || valor === undefined ? '—' : String(valor);
+
+const total = filas.length.toLocaleString('es-CO');
+---
+
+<div class="not-content catalogo" data-catalogo>
+  <div class="catalogo__barra">
+    <input
+      type="search"
+      placeholder="Filtrar por código o nombre…"
+      aria-label="Filtrar el catálogo"
+      autocomplete="off"
+      data-filtro
+    />
+    <span class="catalogo__cuenta" aria-live="polite" data-cuenta data-total={total}>
+      {total} registros
+    </span>
+  </div>
+  <div class="catalogo__marco">
+    <table>
+      <thead>
+        <tr>{columnas.map((columna) => <th scope="col">{etiqueta(columna)}</th>)}</tr>
+      </thead>
+      <tbody>
+        {
+          filas.map((fila) => (
+            <tr data-texto={normalizar(columnas.map((c) => mostrar(fila[c])).join(' '))}>
+              {columnas.map((columna) => (
+                <td class={esCodigo(columna) ? 'monoespacio' : undefined}>{mostrar(fila[columna])}</td>
+              ))}
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+    <p class="catalogo__vacio" hidden data-vacio>Nada coincide con el filtro.</p>
+  </div>
+</div>
+
+<script>
+  const normalizar = (texto: string) =>
+    texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+  for (const catalogo of document.querySelectorAll<HTMLElement>('[data-catalogo]')) {
+    const filtro = catalogo.querySelector<HTMLInputElement>('[data-filtro]')!;
+    const cuenta = catalogo.querySelector<HTMLElement>('[data-cuenta]')!;
+    const vacio = catalogo.querySelector<HTMLElement>('[data-vacio]')!;
+    const filas = [...catalogo.querySelectorAll<HTMLTableRowElement>('tbody tr')];
+
+    filtro.addEventListener('input', () => {
+      // Cada palabra por su lado: «medellin 050» encuentra Medellín por nombre
+      // y por código a la vez.
+      const palabras = normalizar(filtro.value).split(/\s+/).filter(Boolean);
+      let visibles = 0;
+      for (const fila of filas) {
+        const texto = fila.dataset.texto ?? '';
+        const coincide = palabras.every((palabra) => texto.includes(palabra));
+        fila.hidden = !coincide;
+        if (coincide) visibles += 1;
+      }
+      cuenta.textContent = palabras.length
+        ? `${visibles.toLocaleString('es-CO')} de ${cuenta.dataset.total} registros`
+        : `${cuenta.dataset.total} registros`;
+      vacio.hidden = visibles > 0;
+    });
+  }
+</script>
+
+<style>
+  .catalogo {
+    margin-top: 1rem;
+  }
+
+  .catalogo__barra {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .catalogo__barra input {
+    flex: 1 1 16rem;
+    min-width: 0;
+    padding: 0.5rem 0.75rem;
+    font: inherit;
+    color: var(--sl-color-white);
+    background: var(--sl-color-black);
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.35rem;
+  }
+
+  .catalogo__barra input:focus {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 1px;
+  }
+
+  .catalogo__cuenta {
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+  }
+
+  /* Alto acotado y cabecera fija: con mil filas, sin esto la tabla se come la
+     página y se pierde qué columna es cuál. */
+  .catalogo__marco {
+    max-height: 70vh;
+    overflow: auto;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.35rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--sl-text-sm);
+  }
+
+  th,
+  td {
+    padding: 0.4rem 0.75rem;
+    text-align: start;
+    vertical-align: top;
+    border-bottom: 1px solid var(--sl-color-gray-6);
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    white-space: nowrap;
+    color: var(--sl-color-white);
+    background: var(--sl-color-gray-6);
+  }
+
+  tr[hidden] {
+    display: none;
+  }
+
+  .monoespacio {
+    font-family: var(--sl-font-mono);
+    white-space: nowrap;
+  }
+
+  .catalogo__vacio {
+    margin: 0;
+    padding: 1rem;
+    color: var(--sl-color-gray-3);
+  }
+</style>

@@ -104,6 +104,14 @@ export default defineConfig({
           autogenerate: { directory: 'guias' },
         },
         {
+          // Las páginas las escribe `scripts/generar-catalogos.mjs`. Al revés
+          // que la referencia, sí se indexan: «códigos de municipios DIAN» es
+          // una búsqueda que trae justo a quien integra.
+          label: 'Catálogos DIAN',
+          collapsed: true,
+          autogenerate: { directory: 'catalogos' },
+        },
+        {
           label: 'Referencia de la API',
           items: sidebarApi,
         },
