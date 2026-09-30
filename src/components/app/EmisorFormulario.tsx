@@ -11,8 +11,7 @@
  *   miran, en la tabla de habilitación ante la DIAN.
  *
  * La ubicación y las responsabilidades fiscales viajan por **código** (ISO 3166,
- * DANE y el del RUT), no por id: los ids son seriales de cada base y cambian
- * entre ambientes.
+ * DANE y el del RUT), no por id: es lo que espera el endpoint del emisor.
  *
  * El código postal es obligatorio, y al elegir municipio se sugiere el de su
  * cabecera, que es lo que trae el catálogo. Sugerir no es imponer: lo escrito a
@@ -40,8 +39,8 @@ const AMBIENTES: Record<number, string> = { 1: 'Producción', 2: 'Habilitación'
 
 /**
  * Un emisor solo se da de alta con NIT o cédula de ciudadanía, así que el resto
- * del catálogo DIAN no se ofrece. Se filtra por **código**, no por id: los ids
- * son seriales de cada base y cambian entre ambientes.
+ * del catálogo DIAN no se ofrece. Se filtra por **código**, que es el dato de
+ * la DIAN y el que se lee aquí sin tener que saber los ids.
  */
 const IDENTIFICACIONES_EMISOR = ['31', '13'];
 

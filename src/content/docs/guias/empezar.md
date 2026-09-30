@@ -73,9 +73,10 @@ curl "https://api.rededoc.co/api/catalogos/tributo/?search=IVA"
 curl "https://api.rededoc.co/api/catalogos/municipio/?search=Medell"
 ```
 
-:::caution[Los ids no son portables]
-El `id` de un catálogo es un serial de cada base de datos y **cambia entre ambientes**. No
-lo quemes en tu código: resuélvelo por `codigo` o por búsqueda, y guárdalo por ambiente.
+:::tip[Los ids son fijos]
+Cada código de un catálogo tiene un `id` fijo, **el mismo en todos los ambientes**: el que
+uses en pruebas vale en producción. En el tipo de identificación el `id` es el propio
+código (`13` cédula, `31` NIT).
 :::
 
 ## 3. Crear el emisor
@@ -88,7 +89,7 @@ curl -X POST https://api.rededoc.co/api/emisores/emisor/ \
   -H "Content-Type: application/json" -H "Authorization: Api-Key $API_KEY" \
   -d '{
     "razon_social": "Empresa Demo SAS",
-    "tipo_identificacion": 1,
+    "tipo_identificacion": 31,
     "numero_identificacion": "700085371",
     "digito_verificacion": "1",
     "tipo_organizacion": 1,
@@ -99,9 +100,10 @@ curl -X POST https://api.rededoc.co/api/emisores/emisor/ \
   }'
 ```
 
-`pais`, `departamento` y `municipio` van por **código** —ISO 3166 y DANE—, no por id,
-justamente porque el id cambia entre ambientes. El servidor resuelve el código contra el
-catálogo; si no existe, responde `400` en ese campo.
+`tipo_identificacion` y `tipo_organizacion` van por id (`31` NIT, `1` persona jurídica),
+pero `pais`, `departamento`, `municipio` y `responsabilidades` van por **código** —ISO 3166,
+DANE y el del RUT—. El servidor resuelve el código contra el catálogo; si no existe,
+responde `400` en ese campo.
 
 Lo que sí se rechaza es repetir una identificación ya dada de alta: el NIT es único en toda
 la plataforma, esté a nombre de quien esté.

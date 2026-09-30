@@ -5,8 +5,8 @@
  * diez en diez y no admite `page_size`, así que traerlos enteros costaría cien
  * peticiones. Se busca contra `?search=`, que es justo para lo que está.
  *
- * El valor que sale es el **código** (DANE o ISO 3166), no el id: el id es un
- * serial de cada base y cambia entre ambientes. Junto al código va el elemento
+ * El valor que sale es el **código** (DANE o ISO 3166), no el id: es lo que
+ * espera el endpoint del emisor, su único usuario. Junto al código va el elemento
  * entero, para quien necesite algo más de lo elegido —el formulario de emisor
  * saca de ahí el código postal del municipio—.
  */

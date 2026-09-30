@@ -26,18 +26,18 @@ curl -X POST https://api.rededoc.co/api/documentos/documento/ \
     "numero_resolucion": "18760000001",
     "adquiriente": {
       "razon_social": "Cliente Demo",
-      "tipo_identificacion": 1,
+      "tipo_identificacion": 31,
       "numero_identificacion": "800199436",
       "digito_verificacion": "6",
-      "tipo_organizacion": 1, "pais": 1
+      "tipo_organizacion": 1, "pais": 46
     },
     "prefijo": "SETP", "consecutivo": 990000001, "numero": "SETP990000001",
     "fecha_emision": "2026-06-21", "hora_emision": "10:00:00",
-    "moneda": 1,
+    "moneda": 35,
     "detalles": [
       {
         "numero_linea": 1, "descripcion": "Producto demo",
-        "cantidad": "1", "unidad_medida": 1,
+        "cantidad": "1", "unidad_medida": 70,
         "valor_unitario": "1000000", "valor_total": "1000000.00",
         "impuestos": [
           {"tributo": 1, "base_gravable": "1000000.00", "tarifa": "19.00", "valor": "190000.00"}
@@ -46,6 +46,9 @@ curl -X POST https://api.rededoc.co/api/documentos/documento/ \
     ]
   }'
 ```
+
+Los números del ejemplo son ids de [catálogos](/catalogos/), fijos en todos los ambientes:
+`31` NIT, `46` Colombia, `35` peso colombiano, `70` unidad (`94`) y `1` IVA.
 
 Tres cosas que conviene tener claras:
 
