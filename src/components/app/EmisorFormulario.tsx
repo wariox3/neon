@@ -10,10 +10,11 @@
  * - `activo` y los `habilitado_*`: los administra el backend. Aquí solo se
  *   miran, en la tabla de habilitación ante la DIAN.
  *
- * La ubicación y las responsabilidades fiscales viajan por **código** (ISO 3166,
- * DANE y el del RUT), no por id: es lo que espera el endpoint del emisor.
+ * La ubicación (país, departamento y municipio) viaja por **id** del catálogo;
+ * las responsabilidades fiscales, por **código** del RUT. Es lo que espera el
+ * endpoint del emisor.
  *
- * El código postal es obligatorio, y al elegir municipio se sugiere el de su
+ * El código postal es opcional, y al elegir municipio se sugiere el de su
  * cabecera, que es lo que trae el catálogo. Sugerir no es imponer: lo escrito a
  * mano no se pisa nunca.
  */
@@ -30,6 +31,7 @@ import {
   TIPO_IDENTIFICACION,
   TIPO_ORGANIZACION,
   catalogo,
+  porCodigo,
 } from '../../lib/catalogos';
 import { useSesion } from '../../lib/sesion';
 import SelectorBuscado from './SelectorBuscado';
@@ -52,9 +54,9 @@ interface Emisor {
   digito_verificacion: string;
   tipo_organizacion: number | null;
   responsabilidades: string[];
-  pais: string;
-  departamento: string;
-  municipio: string;
+  pais: number | null;
+  departamento: number | null;
+  municipio: number | null;
   direccion: string;
   codigo_postal: string;
   correo: string;
@@ -69,13 +71,17 @@ interface Emisor {
   ambiente_documento_equivalente: number;
 }
 
+/** País que se propone en un alta. Se resuelve a su id al cargar. */
+const PAIS_POR_DEFECTO = 'CO';
+
+/** País, departamento y municipio van como id, en texto mientras se editan. */
 const VACIO = {
   razon_social: '',
   tipo_identificacion: '',
   numero_identificacion: '',
   tipo_organizacion: '',
   responsabilidades: [] as string[],
-  pais: 'CO',
+  pais: '',
   departamento: '',
   municipio: '',
   direccion: '',
@@ -125,6 +131,23 @@ export default function EmisorFormulario() {
     ]).catch(setError);
   }, []);
 
+  // En un alta se propone Colombia. El emisor lo guarda por id, así que hay que
+  // preguntarlo: los ids no son algo que el panel deba saberse de memoria.
+  useEffect(() => {
+    if (id !== null) return;
+    let vigente = true;
+    void porCodigo(PAIS, PAIS_POR_DEFECTO)
+      .then((pais) => {
+        if (vigente && pais) {
+          setDatos((previo) => (previo.pais ? previo : { ...previo, pais: String(pais.id) }));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      vigente = false;
+    };
+  }, [id]);
+
   useEffect(() => {
     if (sesion.estado !== 'autenticado') return;
     if (id === null) {
@@ -140,9 +163,9 @@ export default function EmisorFormulario() {
           numero_identificacion: emisor.numero_identificacion ?? '',
           tipo_organizacion: String(emisor.tipo_organizacion ?? ''),
           responsabilidades: emisor.responsabilidades ?? [],
-          pais: emisor.pais ?? 'CO',
-          departamento: emisor.departamento ?? '',
-          municipio: emisor.municipio ?? '',
+          pais: String(emisor.pais ?? ''),
+          departamento: String(emisor.departamento ?? ''),
+          municipio: String(emisor.municipio ?? ''),
           direccion: emisor.direccion ?? '',
           codigo_postal: emisor.codigo_postal ?? '',
           correo: emisor.correo ?? '',
@@ -169,9 +192,9 @@ export default function EmisorFormulario() {
       numero_identificacion: datos.numero_identificacion,
       tipo_organizacion: Number(datos.tipo_organizacion),
       responsabilidades: datos.responsabilidades,
-      pais: datos.pais,
-      departamento: datos.departamento,
-      municipio: datos.municipio,
+      pais: datos.pais ? Number(datos.pais) : null,
+      departamento: datos.departamento ? Number(datos.departamento) : null,
+      municipio: datos.municipio ? Number(datos.municipio) : null,
       direccion: datos.direccion,
       codigo_postal: datos.codigo_postal,
       correo: datos.correo,
@@ -333,7 +356,7 @@ export default function EmisorFormulario() {
             id="pais"
             catalogo={PAIS}
             valor={datos.pais}
-            onCambio={(codigo) => poner('pais', codigo)}
+            onCambio={(pais) => poner('pais', pais)}
             placeholder="Colombia…"
           />
         </Campo>
@@ -362,7 +385,7 @@ export default function EmisorFormulario() {
           >
             <option value="">Elige…</option>
             {departamentos.map((departamento) => (
-              <option key={departamento.id} value={departamento.codigo}>
+              <option key={departamento.id} value={departamento.id}>
                 {departamento.nombre}
               </option>
             ))}
@@ -379,8 +402,8 @@ export default function EmisorFormulario() {
             id="municipio"
             catalogo={MUNICIPIO}
             valor={datos.municipio}
-            onCambio={(codigo, municipio) => {
-              poner('municipio', codigo);
+            onCambio={(valor, municipio) => {
+              poner('municipio', valor);
               const postal = municipio?.codigo_postal ?? '';
               // Es una sugerencia, no una imposición: solo entra si el campo está
               // vacío o si lo que hay es la sugerencia del municipio anterior.
@@ -402,7 +425,6 @@ export default function EmisorFormulario() {
         >
           <input
             id="codigo_postal"
-            required
             value={datos.codigo_postal}
             onChange={(e) => poner('codigo_postal', e.target.value)}
           />

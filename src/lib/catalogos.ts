@@ -76,6 +76,18 @@ export async function porCodigo<T extends Item = Item>(
   return encontrados.find((item) => item.codigo === codigo);
 }
 
+/**
+ * Trae un elemento por su id, para rellenar lo que ya está guardado. El emisor
+ * guarda país, departamento y municipio por id, no por código.
+ */
+export async function porId<T extends Item = Item>(
+  nombre: string,
+  id: string | number,
+): Promise<T | undefined> {
+  if (id === '' || id === null || id === undefined) return undefined;
+  return api<T>(`/api/catalogos/${nombre}/${id}/`);
+}
+
 // Catálogos cortos: se despliegan enteros.
 export const TIPO_IDENTIFICACION = 'tipo-identificacion';
 export const TIPO_ORGANIZACION = 'tipo-organizacion';

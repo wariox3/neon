@@ -28,7 +28,7 @@ import {
   TIPO_IDENTIFICACION,
   TIPO_ORGANIZACION,
   catalogo,
-  porCodigo,
+  porId,
 } from '../../lib/catalogos';
 import { useSesion } from '../../lib/sesion';
 import {
@@ -170,9 +170,9 @@ interface Emisor {
   digito_verificacion: string;
   tipo_organizacion: number | null;
   responsabilidades: string[];
-  pais: string;
-  departamento: string;
-  municipio: string;
+  pais: number | null;
+  departamento: number | null;
+  municipio: number | null;
   direccion: string;
   codigo_postal: string;
   correo: string;
@@ -1213,17 +1213,17 @@ export default function EmisorDetalle() {
     };
   }, [sesion.estado, id]);
 
-  // País y municipio salen de catálogos grandes, que se buscan por código: hasta
-  // que no hay emisor no se sabe qué buscar.
+  // País y municipio salen de catálogos grandes, que se piden por id: hasta que
+  // no hay emisor no se sabe cuál pedir.
   useEffect(() => {
     if (!emisor) return;
     let vigente = true;
-    void porCodigo(PAIS, emisor.pais)
+    void porId(PAIS, emisor.pais ?? '')
       .then((item) => {
         if (vigente && item) setPais(item.nombre);
       })
       .catch(() => {});
-    void porCodigo(MUNICIPIO, emisor.municipio)
+    void porId(MUNICIPIO, emisor.municipio ?? '')
       .then((item) => {
         if (vigente && item) setMunicipio(item.nombre);
       })
@@ -1323,7 +1323,9 @@ export default function EmisorDetalle() {
       <dl className="datos">
         <Dato etiqueta="País">{pais || emisor.pais}</Dato>
         <Dato etiqueta="Departamento">
-          {nombrePorCodigo(departamentos, emisor.departamento)}
+          {departamentos.find((item) => item.id === emisor.departamento)?.nombre ??
+            emisor.departamento ??
+            ''}
         </Dato>
         <Dato etiqueta="Municipio">{municipio || emisor.municipio}</Dato>
         {/* La dirección va justo antes del código postal y en columna normal:
